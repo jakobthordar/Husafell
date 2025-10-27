@@ -4,5 +4,5 @@ using Catalog.Domain.Products;
 
 public interface IProductCatalogService
 {
-    IReadOnlyCollection<Product> GetProducts();
+    Task<IReadOnlyCollection<Product>> GetProductsAsync(CancellationToken cancellationToken = default);
 }
