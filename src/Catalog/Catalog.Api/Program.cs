@@ -1,17 +1,17 @@
-using Catalog.Application.Products;
-using Catalog.Infrastructure.Products;
+using Catalog.Application.Works;
+using Catalog.Infrastructure.Works;
 using ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.Services.AddSingleton<IProductCatalogService, InMemoryProductCatalogService>();
+builder.Services.AddSingleton<IWorkCatalogService, InMemoryWorkCatalogService>();
 
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
-app.MapGet("/products", (IProductCatalogService service) => Results.Ok(service.GetProducts()));
+app.MapGet("/works", (IWorkCatalogService service) => Results.Ok(service.GetWorks()));
 app.MapGet("/", () => Results.Ok("Catalog API"));
 
 app.Run();
