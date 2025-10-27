@@ -7,5 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Media.Application\Media.Application.csproj" />
     <ProjectReference Include="..\Media.Infrastructure\Media.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\ServiceDefaults\ServiceDefaults.csproj" />
   </ItemGroup>
 </Project>
