@@ -11,7 +11,7 @@ public sealed record AccessionNumber
     private const int MaximumLength = 32;
 
     private static readonly Regex ValidPattern = new(
-        pattern: "^[A-Z0-9\-\./]+$",
+        pattern: @"^[A-Z0-9\-\./]+$",
         options: RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private AccessionNumber(string value) => Value = value;
