@@ -41,5 +41,5 @@ public abstract class Entity<TIdentifier> : IEquatable<Entity<TIdentifier>>
     }
 
     /// <inheritdoc />
-    public override int GetHashCode() => EqualityComparer<TIdentifier>.Default.GetHashCode(Id);
+    public override int GetHashCode() => EqualityComparer<TIdentifier>.Default.GetHashCode(Id!);
 }

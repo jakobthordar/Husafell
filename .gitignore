@@ -52,3 +52,34 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# xUnit
+*.trx
+TestResults/
+
+# Coverage
+coverage.cobertura.xml
+coverage.json
+coverage.opencover.xml
+
+# .NET Installation Scripts
+dotnet-install.sh
+dotnet-install.ps1
+
+# IDE - Rider
+.idea/
+*.sln.iml
+
+# IDE - VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Aspire
+*.dcproj.user

@@ -1,0 +1,27 @@
+<Project>
+  <PropertyGroup>
+    <!-- Common properties for all projects -->
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Package metadata -->
+    <Authors>Aspire Clean Architecture Team</Authors>
+    <Company>Aspire Clean Architecture</Company>
+    <Copyright>Copyright © 2024</Copyright>
+
+    <!-- Source control -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <!-- Suppress specific warnings globally if needed -->
+  <PropertyGroup>
+    <!-- Example: Suppress CA1062 if you handle null checks with ArgumentNullException.ThrowIfNull -->
+    <NoWarn>$(NoWarn);CA1062;CA1303</NoWarn>
+  </PropertyGroup>
+</Project>
