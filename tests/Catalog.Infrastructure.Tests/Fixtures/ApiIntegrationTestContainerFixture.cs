@@ -1,6 +1,7 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
+using Testcontainers.PostgreSql;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -9,12 +10,15 @@ using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Xunit;
+using Catalog.Infrastructure.Data;
+using Catalog.Domain.Works;
+using Catalog.Domain.Works.ValueObjects;
 
 namespace Catalog.Infrastructure.Tests.Fixtures;
 
 public class ApiIntegrationTestContainerFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlTestcontainer _container;
+    private readonly PostgreSqlContainer _container;
     private readonly ILogger<ApiIntegrationTestContainerFixture> _logger;
     private WebApplicationFactory<Program>? _factory;
     private HttpClient? _client;
@@ -26,8 +30,8 @@ public class ApiIntegrationTestContainerFixture : IAsyncLifetime
     {
         _logger = new ConsoleLogger<ApiIntegrationTestContainerFixture>();
         
-        _container = new TestcontainersBuilder<PostgreSqlTestcontainer>()
-            .WithDatabase(new PostgreSqlTestcontainerConfiguration
+        _container = new TestcontainersBuilder<PostgreSqlContainer>()
+            .WithDatabase(new PostgreSqlContainerConfiguration
             {
                 Database = "catalog_api_test",
                 Username = "api_test_user",
@@ -36,7 +40,6 @@ public class ApiIntegrationTestContainerFixture : IAsyncLifetime
             .WithImage("postgres:16-alpine")
             .WithPortBinding(5432, true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5432))
-            .WithLogger(new TestcontainersLogger(_logger))
             .Build();
     }
 

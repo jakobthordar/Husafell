@@ -2,6 +2,7 @@ using Catalog.Domain.Works;
 using Catalog.Domain.Works.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System.Text.Json;
 
 namespace Catalog.Infrastructure.Data.Configurations;
 
@@ -24,18 +25,9 @@ public class WorkConfiguration : IEntityTypeConfiguration<Work>
 
         builder.OwnsOne(w => w.Title, title =>
         {
-            title.Property(t => t.Value)
+            title.Property(t => t.DefaultText)
                 .HasColumnName("Title")
                 .IsRequired();
-                
-            title.OwnsMany(t => t.Translations, translation =>
-            {
-                translation.Property(tr => tr.Culture)
-                    .HasMaxLength(10)
-                    .IsRequired();
-                translation.Property(tr => tr.Text)
-                    .IsRequired();
-            });
         });
 
         builder.OwnsOne(w => w.Slug, slug =>
@@ -48,17 +40,8 @@ public class WorkConfiguration : IEntityTypeConfiguration<Work>
 
         builder.OwnsOne(w => w.Description, desc =>
         {
-            desc.Property(d => d.Value)
+            desc.Property(d => d.DefaultText)
                 .HasColumnName("Description");
-                
-            desc.OwnsMany(d => d.Translations, translation =>
-            {
-                translation.Property(tr => tr.Culture)
-                    .HasMaxLength(10)
-                    .IsRequired();
-                translation.Property(tr => tr.Text)
-                    .IsRequired();
-            });
         });
 
         builder.OwnsOne(w => w.Dimensions, dim =>
@@ -80,7 +63,7 @@ public class WorkConfiguration : IEntityTypeConfiguration<Work>
 
         builder.HasMany(w => w.Assets)
             .WithOne()
-            .HasForeignKey(a => a.WorkId);
+            .HasForeignKey("WorkId");
 
         builder.Ignore(w => w.DomainEvents);
     }
@@ -95,26 +78,14 @@ public class AssetConfiguration : IEntityTypeConfiguration<Asset>
         builder.Property(a => a.Id)
             .ValueGeneratedNever();
 
-        builder.Property(a => a.WorkId)
-            .IsRequired();
-
         builder.Property(a => a.FileName)
             .HasMaxLength(500)
             .IsRequired();
 
         builder.OwnsOne(a => a.Caption, caption =>
         {
-            caption.Property(c => c.Value)
+            caption.Property(c => c.DefaultText)
                 .HasColumnName("Caption");
-                
-            caption.OwnsMany(c => c.Translations, translation =>
-            {
-                translation.Property(tr => tr.Culture)
-                    .HasMaxLength(10)
-                    .IsRequired();
-                translation.Property(tr => tr.Text)
-                    .IsRequired();
-            });
         });
 
         builder.Property(a => a.IsPrimary)

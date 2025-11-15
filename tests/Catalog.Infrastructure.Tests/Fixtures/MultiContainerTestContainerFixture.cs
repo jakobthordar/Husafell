@@ -2,18 +2,23 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
+using Testcontainers.PostgreSql;
+using Testcontainers.Redis;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using StackExchange.Redis;
 using System.Text.Json;
+using Catalog.Infrastructure.Data;
+using Catalog.Domain.Works;
+using Catalog.Domain.Works.ValueObjects;
 
 namespace Catalog.Infrastructure.Tests.Fixtures;
 
 public class MultiContainerTestContainerFixture : IAsyncLifetime
 {
     private readonly INetwork _network;
-    private readonly PostgreSqlTestcontainer _postgresContainer;
-    private readonly TestcontainersContainer _redisContainer;
+    private readonly PostgreSqlContainer _postgresContainer;
+    private readonly RedisContainer _redisContainer;
     private readonly ILogger<MultiContainerTestContainerFixture> _logger;
     private IConnectionMultiplexer? _redis;
 
@@ -30,10 +35,10 @@ public class MultiContainerTestContainerFixture : IAsyncLifetime
             .Build();
 
         // PostgreSQL container
-        _postgresContainer = new TestcontainersBuilder<PostgreSqlTestcontainer>()
+        _postgresContainer = new TestcontainersBuilder<PostgreSqlContainer>()
             .WithNetwork(_network)
             .WithNetworkAliases("catalog-db")
-            .WithDatabase(new PostgreSqlTestcontainerConfiguration
+            .WithDatabase(new PostgreSqlContainerConfiguration
             {
                 Database = "catalog_integration",
                 Username = "integration_user",
@@ -42,17 +47,15 @@ public class MultiContainerTestContainerFixture : IAsyncLifetime
             .WithImage("postgres:16-alpine")
             .WithPortBinding(5432, true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5432))
-            .WithLogger(new TestcontainersLogger(_logger))
             .Build();
 
         // Redis container
-        _redisContainer = new TestcontainersBuilder<TestcontainersContainer>()
+        _redisContainer = new TestcontainersBuilder<RedisContainer>()
             .WithNetwork(_network)
             .WithNetworkAliases("catalog-cache")
             .WithImage("redis:7-alpine")
             .WithPortBinding(6379, true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(6379))
-            .WithLogger(new TestcontainersLogger(_logger))
             .Build();
     }
 

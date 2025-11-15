@@ -7,6 +7,9 @@
     <IsAspireAppHost>true</IsAspireAppHost>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting" Version="9.0.0" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="9.0.0" />
+    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="9.0.0" />
     <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
     <ProjectReference Include="..\Catalog\Catalog.Api\Catalog.Api.csproj" />
     <ProjectReference Include="..\Media\Media.Api\Media.Api.csproj" />

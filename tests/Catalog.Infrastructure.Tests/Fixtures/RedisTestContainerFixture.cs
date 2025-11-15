@@ -1,6 +1,7 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
+using Testcontainers.Redis;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using StackExchange.Redis;
@@ -9,7 +10,7 @@ namespace Catalog.Infrastructure.Tests.Fixtures;
 
 public class RedisTestContainerFixture : IAsyncLifetime
 {
-    private readonly TestcontainersContainer _container;
+    private readonly RedisContainer _container;
     private readonly ILogger<RedisTestContainerFixture> _logger;
     private IConnectionMultiplexer? _redis;
 
@@ -20,11 +21,10 @@ public class RedisTestContainerFixture : IAsyncLifetime
     {
         _logger = new ConsoleLogger<RedisTestContainerFixture>();
         
-        _container = new TestcontainersBuilder<TestcontainersContainer>()
+        _container = new TestcontainersBuilder<RedisContainer>()
             .WithImage("redis:7-alpine")
             .WithPortBinding(6379, true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(6379))
-            .WithLogger(new TestcontainersLogger(_logger))
             .Build();
     }
 
