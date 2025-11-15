@@ -69,9 +69,9 @@ public class CatalogDbContextTests : IAsyncLifetime
         var work = Work.Register(
             id: Guid.NewGuid(),
             accessionNumber: AccessionNumber.Create("TEST-001"),
-            title: LocalizedText.Create(("en", "Test Work")),
+            title: LocalizedText.Create("en", "Test Work"),
             slug: Slug.Create("test-work"),
-            description: LocalizedText.Create(("en", "A test work for integration testing")),
+            description: LocalizedText.Create("en", "A test work for integration testing"),
             dimensions: Dimensions.Create(10.5m, 20.3m, 5.1m, MeasurementUnit.Inches));
 
         // Act
@@ -98,21 +98,21 @@ public class CatalogDbContextTests : IAsyncLifetime
         var work = Work.Register(
             id: Guid.NewGuid(),
             accessionNumber: AccessionNumber.Create("TEST-002"),
-            title: LocalizedText.Create(("en", "Test Work with Assets")),
+            title: LocalizedText.Create("en", "Test Work with Assets"),
             slug: Slug.Create("test-work-assets"),
-            description: LocalizedText.Create(("en", "A test work with assets for integration testing")),
+            description: LocalizedText.Create("en", "A test work with assets for integration testing"),
             dimensions: Dimensions.Create(15.0m, 25.0m, 10.0m, MeasurementUnit.Centimetres));
 
         work.AddAsset(
             assetId: Guid.NewGuid(),
             fileName: "test-image.jpg",
-            caption: LocalizedText.Create(("en", "Test image caption")),
+            caption: LocalizedText.Create("en", "Test image caption"),
             isPrimary: true);
 
         work.AddAsset(
             assetId: Guid.NewGuid(),
             fileName: "test-image-2.jpg",
-            caption: LocalizedText.Create(("en", "Secondary test image")),
+            caption: LocalizedText.Create("en", "Secondary test image"),
             isPrimary: false);
 
         // Act
@@ -139,14 +139,14 @@ public class CatalogDbContextTests : IAsyncLifetime
         var work1 = Work.Register(
             id: Guid.NewGuid(),
             accessionNumber: AccessionNumber.Create("QUERY-001"),
-            title: LocalizedText.Create(("en", "Query Test Work 1")),
+            title: LocalizedText.Create("en", "Query Test Work 1"),
             slug: Slug.Create("query-test-1"),
             dimensions: Dimensions.Create(10.0m, 20.0m, null, MeasurementUnit.Centimetres));
 
         var work2 = Work.Register(
             id: Guid.NewGuid(),
             accessionNumber: AccessionNumber.Create("QUERY-002"),
-            title: LocalizedText.Create(("en", "Query Test Work 2")),
+            title: LocalizedText.Create("en", "Query Test Work 2"),
             slug: Slug.Create("query-test-2"),
             dimensions: Dimensions.Create(30.0m, 40.0m, null, MeasurementUnit.Inches));
 

@@ -1,6 +1,6 @@
 using Aspire.Hosting;
 using Aspire.Hosting.Azure;
-using Aspire.Hosting.PostgreSQL;
+using Aspire.Hosting.Postgresql;
 using Microsoft.Extensions.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);

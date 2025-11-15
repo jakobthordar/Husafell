@@ -11,14 +11,16 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Xunit;
 using Catalog.Infrastructure.Data;
+using Catalog.Domain.Works;
+using Catalog.Domain.Works.ValueObjects;
 
 namespace Catalog.Infrastructure.Tests.Fixtures;
 
 public class ApiIntegrationTestContainerFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlTestcontainer _container;
+    private readonly PostgreSqlContainer _container;
     private readonly ILogger<ApiIntegrationTestContainerFixture> _logger;
-    private WebApplicationFactory? _factory;
+    private WebApplicationFactory<Program>? _factory;
     private HttpClient? _client;
 
     public string ConnectionString { get; private set; } = string.Empty;
@@ -28,8 +30,8 @@ public class ApiIntegrationTestContainerFixture : IAsyncLifetime
     {
         _logger = new ConsoleLogger<ApiIntegrationTestContainerFixture>();
         
-        _container = new TestcontainersBuilder<PostgreSqlTestcontainer>()
-            .WithDatabase(new PostgreSqlTestcontainerConfiguration
+        _container = new TestcontainersBuilder<PostgreSqlContainer>()
+            .WithDatabase(new PostgreSqlContainerConfiguration
             {
                 Database = "catalog_api_test",
                 Username = "api_test_user",
@@ -49,7 +51,7 @@ public class ApiIntegrationTestContainerFixture : IAsyncLifetime
             ConnectionString = _container.GetConnectionString();
             
             // Create WebApplicationFactory with test database
-            _factory = new WebApplicationFactory()
+            _factory = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
                     builder.ConfigureServices(services =>

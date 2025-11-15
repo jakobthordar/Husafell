@@ -9,7 +9,7 @@ namespace Media.Infrastructure.Tests.Fixtures;
 
 public class PostgreSQLTestContainerFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlTestcontainer _container;
+    private readonly PostgreSqlContainer _container;
     private readonly ILogger<PostgreSQLTestContainerFixture> _logger;
 
     public string ConnectionString { get; private set; } = string.Empty;
@@ -18,8 +18,8 @@ public class PostgreSQLTestContainerFixture : IAsyncLifetime
     {
         _logger = new ConsoleLogger<PostgreSQLTestContainerFixture>();
         
-        _container = new TestcontainersBuilder<PostgreSqlTestcontainer>()
-            .WithDatabase(new PostgreSqlTestcontainerConfiguration
+        _container = new TestcontainersBuilder<PostgreSqlContainer>()
+            .WithDatabase(new PostgreSqlContainerConfiguration
             {
                 Database = "test_media",
                 Username = "test_user",
