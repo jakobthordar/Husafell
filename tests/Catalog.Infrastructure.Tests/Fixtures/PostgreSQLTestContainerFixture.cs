@@ -1,6 +1,7 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
+using Testcontainers.PostgreSql;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -8,7 +9,7 @@ namespace Catalog.Infrastructure.Tests.Fixtures;
 
 public class PostgreSQLTestContainerFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlTestcontainer _container;
+    private readonly PostgreSqlContainer _container;
     private readonly ILogger<PostgreSQLTestContainerFixture> _logger;
 
     public string ConnectionString { get; private set; } = string.Empty;
@@ -17,8 +18,8 @@ public class PostgreSQLTestContainerFixture : IAsyncLifetime
     {
         _logger = new ConsoleLogger<PostgreSQLTestContainerFixture>();
         
-        _container = new TestcontainersBuilder<PostgreSqlTestcontainer>()
-            .WithDatabase(new PostgreSqlTestcontainerConfiguration
+        _container = new TestcontainersBuilder<PostgreSqlContainer>()
+            .WithDatabase(new PostgreSqlContainerConfiguration
             {
                 Database = "test_catalog",
                 Username = "test_user",
@@ -27,7 +28,6 @@ public class PostgreSQLTestContainerFixture : IAsyncLifetime
             .WithImage("postgres:16-alpine")
             .WithPortBinding(5432, true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5432))
-            .WithLogger(new TestcontainersLogger(_logger))
             .Build();
     }
 
@@ -73,40 +73,5 @@ public class ConsoleLogger<T> : ILogger<T>
         {
             Console.WriteLine($"Exception: {exception}");
         }
-    }
-}
-
-public class TestcontainersLogger : IContainerLogger
-{
-    private readonly ILogger _logger;
-
-    public TestcontainersLogger(ILogger logger)
-    {
-        _logger = logger;
-    }
-
-    public void Debug(string message, params object[] args)
-    {
-        _logger.LogDebug(message, args);
-    }
-
-    public void Error(string message, params object[] args)
-    {
-        _logger.LogError(message, args);
-    }
-
-    public void Information(string message, params object[] args)
-    {
-        _logger.LogInformation(message, args);
-    }
-
-    public void Verbose(string message, params object[] args)
-    {
-        _logger.LogTrace(message, args);
-    }
-
-    public void Warning(string message, params object[] args)
-    {
-        _logger.LogWarning(message, args);
     }
 }
