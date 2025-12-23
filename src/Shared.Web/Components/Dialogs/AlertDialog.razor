@@ -1,0 +1,70 @@
+@if (IsVisible)
+{
+    <div class="modal-backdrop" @onclick="HandleBackdropClick">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header border-bottom p-3 @HeaderClass">
+                <h5 class="modal-title mb-0">
+                    <i class="bi @IconClass me-2"></i>
+                    @Title
+                </h5>
+            </div>
+            <div class="modal-body p-3">
+                <p class="mb-0">@Message</p>
+            </div>
+            <div class="modal-footer border-top p-3 d-flex justify-content-end">
+                <button class="btn btn-primary" @onclick="OnClose">
+                    @CloseText
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "Alert";
+
+    [Parameter]
+    public string Message { get; set; } = string.Empty;
+
+    [Parameter]
+    public AlertType Type { get; set; } = AlertType.Info;
+
+    [Parameter]
+    public string CloseText { get; set; } = "OK";
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public bool CloseOnBackdropClick { get; set; } = true;
+
+    private string HeaderClass => Type switch
+    {
+        AlertType.Success => "bg-success text-white",
+        AlertType.Error => "bg-danger text-white",
+        AlertType.Warning => "bg-warning",
+        AlertType.Info => "bg-info",
+        _ => ""
+    };
+
+    private string IconClass => Type switch
+    {
+        AlertType.Success => "bi-check-circle",
+        AlertType.Error => "bi-exclamation-circle",
+        AlertType.Warning => "bi-exclamation-triangle",
+        AlertType.Info => "bi-info-circle",
+        _ => "bi-info-circle"
+    };
+
+    private async Task HandleBackdropClick()
+    {
+        if (CloseOnBackdropClick)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+}

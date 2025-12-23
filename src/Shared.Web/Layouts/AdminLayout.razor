@@ -1,0 +1,28 @@
+@inherits LayoutComponentBase
+
+<div class="admin-layout">
+    <div class="admin-sidebar">
+        <AdminNavigation />
+    </div>
+    
+    <div class="admin-main">
+        <header class="admin-header">
+            <div class="d-flex justify-between align-center w-full">
+                <h2 class="mb-0">Admin Dashboard</h2>
+                <div>
+                    <span class="text-secondary">Welcome, Admin</span>
+                </div>
+            </div>
+        </header>
+        
+        <main class="admin-content">
+            @Body
+        </main>
+        
+        <footer class="admin-footer">
+            <p class="mb-0 text-secondary">
+                &copy; @DateTime.Now.Year AspireCleanArchitecture. All rights reserved.
+            </p>
+        </footer>
+    </div>
+</div>

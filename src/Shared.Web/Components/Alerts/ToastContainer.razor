@@ -1,0 +1,45 @@
+@inject NotificationService NotificationService
+@implements IDisposable
+
+<div class="toast-container">
+    @foreach (var notification in notifications)
+    {
+        <Toast 
+            IsVisible="true"
+            Title="@notification.Title"
+            Message="@notification.Message"
+            Type="@notification.Type"
+            AutoDismissMs="@notification.AutoDismissMs"
+            OnClose="@(() => RemoveNotification(notification.Id))" />
+    }
+</div>
+
+@code {
+    private List<NotificationMessage> notifications = new();
+
+    protected override void OnInitialized()
+    {
+        NotificationService.OnNotification += AddNotification;
+    }
+
+    private void AddNotification(NotificationMessage notification)
+    {
+        notifications.Add(notification);
+        StateHasChanged();
+    }
+
+    private void RemoveNotification(Guid id)
+    {
+        var notification = notifications.FirstOrDefault(n => n.Id == id);
+        if (notification != null)
+        {
+            notifications.Remove(notification);
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        NotificationService.OnNotification -= AddNotification;
+    }
+}
