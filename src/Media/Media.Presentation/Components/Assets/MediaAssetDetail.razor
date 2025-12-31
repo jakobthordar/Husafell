@@ -1,0 +1,232 @@
+@namespace Media.Presentation.Components.Assets
+
+@using Media.Presentation.DTOs
+@using Media.Presentation.Services
+
+@inject MediaApiService MediaApiService
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (asset is not null)
+{
+    <h1 class="mb-4">Asset Details</h1>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Preview</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary btn-sm" @onclick="DownloadAsset">
+                            <i class="bi bi-download me-1"></i>Download
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="ConfirmDelete">
+                            <i class="bi bi-trash me-1"></i>Delete
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body text-center p-5 bg-light">
+                    <Media.Presentation.Components.Shared.MediaPreview ContentType="@asset.ContentType" Url="@asset.Url" FileName="@asset.FileName" />
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Metadata</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">File Name</dt>
+                        <dd class="col-sm-9">@asset.FileName</dd>
+
+                        <dt class="col-sm-3">Content Type</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-secondary">@asset.ContentType</span>
+                        </dd>
+
+                        <dt class="col-sm-3">Asset ID</dt>
+                        <dd class="col-sm-9">
+                            <code>@asset.Id</code>
+                        </dd>
+
+                        <dt class="col-sm-3">Uploaded At</dt>
+                        <dd class="col-sm-9">@asset.UploadedAt:dddd, dd MMMM yyyy HH:mm:ss</dd>
+
+                        <dt class="col-sm-3">URL</dt>
+                        <dd class="col-sm-9">
+                            <input type="text" class="form-control form-control-sm" value="@asset.Url" readonly />
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" @onclick="EditMetadata">
+                            <i class="bi bi-pencil me-2"></i>Edit Metadata
+                        </button>
+                        <button class="btn btn-outline-primary" @onclick="CopyUrl">
+                            <i class="bi bi-clipboard me-2"></i>Copy URL
+                        </button>
+                        <button class="btn btn-outline-secondary" @onclick="ViewAllAssets">
+                            <i class="bi bi-images me-2"></i>View All Assets
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            @if (IsImageType(asset.ContentType))
+            {
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Embed Code</h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea class="form-control" rows="4" readonly>
+&lt;img src="@asset.Url" alt="@asset.FileName" /&gt;</textarea>
+                        <button class="btn btn-sm btn-outline-primary mt-2" @onclick="CopyEmbedCode">
+                            Copy to Clipboard
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (showDeleteConfirm)
+    {
+        <div class="modal" style="display: block;">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Delete Asset</h5>
+                        <button type="button" class="btn-close" @onclick="() => showDeleteConfirm = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete this media asset? This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="() => showDeleteConfirm = false">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="DeleteAsset">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid AssetId { get; set; }
+
+    private MediaAssetDto? asset;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private bool showDeleteConfirm;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAssetAsync();
+    }
+
+    private async Task LoadAssetAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            asset = await MediaApiService.GetAssetByIdAsync(AssetId);
+            if (asset is null)
+            {
+                errorMessage = "Asset not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load asset: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void DownloadAsset()
+    {
+        var url = MediaApiService.GetDownloadUrl(asset!.Id);
+        // Navigate to download URL
+    }
+
+    private void ConfirmDelete()
+    {
+        showDeleteConfirm = true;
+    }
+
+    private async Task DeleteAsset()
+    {
+        showDeleteConfirm = false;
+        try
+        {
+            await MediaApiService.DeleteAssetAsync(asset!.Id);
+            // Navigate back to list
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to delete asset: {ex.Message}";
+        }
+    }
+
+    private void EditMetadata()
+    {
+        // Navigate to edit page
+    }
+
+    private async Task CopyUrl()
+    {
+        if (asset is not null)
+        {
+            // Copy URL to clipboard
+            await Task.CompletedTask;
+        }
+    }
+
+    private async Task CopyEmbedCode()
+    {
+        if (asset is not null)
+        {
+            var embedCode = $"<img src=\"{asset.Url}\" alt=\"{asset.FileName}\" />";
+            // Copy to clipboard
+            await Task.CompletedTask;
+        }
+    }
+
+    private void ViewAllAssets()
+    {
+        // Navigate to assets list
+    }
+
+    private static bool IsImageType(string contentType)
+    {
+        return contentType.StartsWith("image/");
+    }
+}

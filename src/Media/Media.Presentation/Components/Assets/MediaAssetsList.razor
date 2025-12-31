@@ -1,0 +1,107 @@
+@namespace Media.Presentation.Components.Assets
+
+@using Media.Presentation.DTOs
+@using Media.Presentation.Services
+
+@inject MediaApiService MediaApiService
+
+<h1 class="mb-4">Media Library</h1>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="input-group" style="max-width: 400px;">
+        <span class="input-group-text">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" class="form-control" placeholder="Search assets..." @bind="searchTerm" @bind:event="oninput" />
+    </div>
+    <button class="btn btn-primary" @onclick="NavigateToUpload">
+        <i class="bi bi-upload me-2"></i>Upload Asset
+    </button>
+</div>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (filteredAssets.Any())
+{
+    <div class="row g-4">
+        @foreach (var asset in filteredAssets)
+        {
+            <div class="col-md-4 col-lg-3">
+                <div class="card h-100 asset-card" @onclick="() => ViewAsset(asset.Id)">
+                    <div class="card-body text-center">
+                        <Media.Presentation.Components.Shared.MediaPreview ContentType="@asset.ContentType" Url="@asset.Url" FileName="@asset.FileName" />
+                        <h6 class="card-title mt-3 text-truncate" title="@asset.FileName">@asset.FileName</h6>
+                        <small class="text-muted">@asset.UploadedAt:dd MMM yyyy</small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="text-center py-5">
+        <i class="bi bi-images display-4 text-muted mb-3"></i>
+        <h5>No Media Assets Found</h5>
+        <p class="text-muted">@GetEmptyMessage()</p>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<MediaAssetDto> _assets = Array.Empty<MediaAssetDto>();
+    private bool isLoading = true;
+    private string? searchTerm = null;
+
+    private IReadOnlyCollection<MediaAssetDto> filteredAssets =>
+        string.IsNullOrWhiteSpace(searchTerm)
+            ? _assets
+            : _assets.Where(a => a.FileName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAssetsAsync();
+    }
+
+    private async Task LoadAssetsAsync()
+    {
+        isLoading = true;
+        try
+        {
+            _assets = await MediaApiService.GetAssetsAsync();
+        }
+        catch (Exception ex)
+        {
+            // Log error and show notification
+            Console.Error.WriteLine($"Error loading assets: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void NavigateToUpload()
+    {
+        // Navigate to upload page
+    }
+
+    private void ViewAsset(Guid assetId)
+    {
+        // Navigate to asset detail page
+    }
+
+    private string GetEmptyMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return "Try adjusting your search terms.";
+        }
+        return "Upload your first media asset to get started.";
+    }
+}

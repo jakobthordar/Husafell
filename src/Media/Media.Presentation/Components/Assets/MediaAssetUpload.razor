@@ -1,0 +1,173 @@
+@namespace Media.Presentation.Components.Assets
+
+@using Media.Presentation.DTOs
+@using Media.Presentation.Services
+
+@inject MediaApiService MediaApiService
+
+<h1 class="mb-4">Upload Media Asset</h1>
+
+<div class="card">
+    <div class="card-body">
+        @if (uploadProgress is null)
+        {
+            <div class="upload-zone mb-3">
+                <div class="text-center p-5 border rounded border-2 border-dashed">
+                    <i class="bi bi-cloud-upload display-4 text-muted mb-3"></i>
+                    <h4>Drag & Drop File</h4>
+                    <p class="text-muted">or click to browse</p>
+                    <input type="file" class="form-control w-auto mx-auto" @ref="fileInput" @onchange="HandleFileSelected" accept="image/*,video/*,audio/*,.pdf,.doc,.docx" />
+                </div>
+            </div>
+
+            @if (selectedFileName is not null)
+            {
+                <div class="mt-4">
+                    <h5 class="mb-3">Selected File</h5>
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="ms-3 flex-grow-1">
+                                    <h6 class="mb-0">@selectedFileName</h6>
+                                    <small class="text-muted">@selectedContentType</small>
+                                </div>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="ClearFile">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button class="btn btn-primary" @onclick="StartUpload" disabled="@isUploading">
+                        @if (isUploading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Uploading...</span>
+                        }
+                        else
+                        {
+                            <span><i class="bi bi-upload me-2"></i>Upload Asset</span>
+                        }
+                    </button>
+                    <button class="btn btn-secondary ms-2" @onclick="CancelUpload" disabled="@isUploading">
+                        Cancel
+                    </button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <h4>Uploading File</h4>
+                <p class="text-muted">@selectedFileName</p>
+                <div class="progress" style="height: 25px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         style="width: @uploadProgress%;"
+                         aria-valuenow="@uploadProgress"
+                         aria-valuemin="0"
+                         aria-valuemax="100">
+                        @uploadProgress%
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (errorMessage is not null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private ElementReference fileInput;
+    private string? selectedFileName;
+    private string? selectedContentType;
+    private bool isUploading;
+    private int? uploadProgress;
+    private string? errorMessage;
+
+    private void HandleFileSelected(ChangeEventArgs e)
+    {
+        if (e.Value is not null)
+        {
+            var files = (e.Value as string[]) ?? Array.Empty<string>();
+            if (files.Length > 0)
+            {
+                selectedFileName = files[0];
+                selectedContentType = "application/octet-stream";
+                errorMessage = null;
+            }
+        }
+    }
+
+    private void ClearFile()
+    {
+        selectedFileName = null;
+        selectedContentType = null;
+        errorMessage = null;
+    }
+
+    private async Task StartUpload()
+    {
+        if (string.IsNullOrEmpty(selectedFileName))
+        {
+            errorMessage = "Please select a file to upload.";
+            return;
+        }
+
+        isUploading = true;
+        uploadProgress = 0;
+        errorMessage = null;
+
+        try
+        {
+            // Simulate upload progress
+            var progressTimer = new System.Timers.Timer(200);
+            var currentProgress = 0;
+            progressTimer.Elapsed += (s, ev) =>
+            {
+                if (currentProgress < 90)
+                {
+                    currentProgress += Random.Shared.Next(5, 15);
+                    uploadProgress = Math.Min(currentProgress, 90);
+                    InvokeAsync(StateHasChanged);
+                }
+            };
+            progressTimer.Start();
+
+            // Simulate file upload
+            await Task.Delay(2000);
+
+            progressTimer.Stop();
+            uploadProgress = 100;
+
+            await Task.Delay(500);
+
+            // Clear form
+            selectedFileName = null;
+            selectedContentType = null;
+            uploadProgress = null;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to upload file: {ex.Message}";
+            uploadProgress = null;
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+
+    private void CancelUpload()
+    {
+        ClearFile();
+    }
+}

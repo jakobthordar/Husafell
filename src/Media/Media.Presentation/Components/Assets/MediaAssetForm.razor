@@ -1,0 +1,175 @@
+@namespace Media.Presentation.Components.Assets
+
+@using Media.Presentation.DTOs
+
+<h1 class="mb-4">@Title</h1>
+
+<div class="card">
+    <div class="card-body">
+        <form>
+            <div class="mb-3">
+                <label class="form-label">File Name</label>
+                <input type="text" class="form-control" value="@Model.FileName" placeholder="Enter file name" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Content Type</label>
+                <select class="form-select" disabled="@(!IsNew)">
+                    @foreach (var contentType in contentTypes)
+                    {
+                        @if (Model.ContentType == contentType)
+                        {
+                            <option value="@contentType" selected>@contentType</option>
+                        }
+                        else
+                        {
+                            <option value="@contentType">@contentType</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Alt Text</label>
+                    <input type="text" class="form-control" value="@Model.AltText" placeholder="Describe the image for accessibility" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Tags</label>
+                    <input type="text" class="form-control" value="@Model.Tags" placeholder="Comma-separated tags" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" rows="4" placeholder="Enter a description">@Model.Description</textarea>
+            </div>
+
+            @if (!IsNew)
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Read-only fields:</strong> Content Type cannot be changed after upload.
+                </div>
+            }
+
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <button type="button" class="btn btn-secondary" @onclick="Cancel">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-primary" disabled="@isSubmitting" @onclick="HandleSubmit">
+                    @if (isSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Saving...</span>
+                    }
+                    else
+                    {
+                        <span>@SubmitButtonText</span>
+                    }
+                </button>
+            </div>
+        </form>
+
+        @if (errorMessage is not null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public MediaAssetDto? Asset { get; set; }
+
+    [Parameter]
+    public bool IsNew { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<MediaAssetDto> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private MediaAssetFormModel Model { get; set; } = new();
+    private bool isSubmitting;
+    private string? errorMessage;
+
+    private string Title => IsNew ? "Upload New Asset" : "Edit Asset Metadata";
+    private string SubmitButtonText => IsNew ? "Upload" : "Save Changes";
+
+    private static readonly string[] contentTypes = new[]
+    {
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "image/svg+xml",
+        "video/mp4",
+        "video/webm",
+        "audio/mpeg",
+        "audio/wav",
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    };
+
+    protected override void OnInitialized()
+    {
+        if (Asset is not null && !IsNew)
+        {
+            Model = new MediaAssetFormModel
+            {
+                FileName = Asset.FileName,
+                ContentType = Asset.ContentType,
+                AltText = string.Empty,
+                Tags = string.Empty,
+                Description = string.Empty
+            };
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            // Create updated asset DTO
+            var updatedAsset = IsNew
+                ? new MediaAssetDto(Guid.NewGuid(), Model.FileName, Model.ContentType, DateTime.UtcNow, string.Empty)
+                : Asset is not null ? Asset with { FileName = Model.FileName } : new MediaAssetDto(Guid.NewGuid(), Model.FileName, Model.ContentType, DateTime.UtcNow, string.Empty);
+
+            await OnSave.InvokeAsync(updatedAsset);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to save asset: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Form model for media asset metadata.
+    /// </summary>
+    public sealed class MediaAssetFormModel
+    {
+        public string FileName { get; set; } = string.Empty;
+        public string ContentType { get; set; } = "image/jpeg";
+        public string AltText { get; set; } = string.Empty;
+        public string Tags { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+}
