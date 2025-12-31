@@ -13,7 +13,7 @@ public class WorkTests
         var work = Work.Register(
             id: Guid.NewGuid(),
             accessionNumber: AccessionNumber.Create("INV-2024-01"),
-            title: LocalizedText.Create(("en", "Test Work")),
+            title: LocalizedText.Create("en", "Test Work"),
             slug: Slug.Create("test work"));
 
         var domainEvent = Assert.Single(work.DomainEvents);
@@ -111,7 +111,7 @@ public class WorkTests
         var work = CreateWork();
         work.ClearDomainEvents();
 
-        work.UpdateDescription(LocalizedText.Create(("en", "Updated description")));
+        work.UpdateDescription(LocalizedText.Create("en", "Updated description"));
 
         Assert.Single(work.DomainEvents);
         Assert.IsType<WorkDescriptionUpdatedDomainEvent>(work.DomainEvents.Single());
@@ -120,11 +120,11 @@ public class WorkTests
     [Fact]
     public void UpdateDescription_WhenUnchanged_ShouldNotRaiseEvent()
     {
-        var description = LocalizedText.Create(("en", "Description"));
+        var description = LocalizedText.Create("en", "Description");
         var work = Work.Register(
             Guid.NewGuid(),
             AccessionNumber.Create("INV-2024-02"),
-            LocalizedText.Create(("en", "Work")),
+            LocalizedText.Create("en", "Work"),
             Slug.Create("work"),
             description);
 
@@ -154,7 +154,7 @@ public class WorkTests
         var work = Work.Register(
             Guid.NewGuid(),
             AccessionNumber.Create("INV-2024-03"),
-            LocalizedText.Create(("en", "Work")),
+            LocalizedText.Create("en", "Work"),
             Slug.Create("work"),
             dimensions: dimensions);
 
@@ -171,7 +171,7 @@ public class WorkTests
         var work = CreateWork();
         work.ClearDomainEvents();
 
-        work.Rename(LocalizedText.Create(("en", "New Title")), Slug.Create("new title"));
+        work.Rename(LocalizedText.Create("en", "New Title"), Slug.Create("new title"));
 
         Assert.Single(work.DomainEvents);
         var @event = Assert.IsType<WorkRenamedDomainEvent>(work.DomainEvents.Single());
@@ -181,7 +181,7 @@ public class WorkTests
     [Fact]
     public void Rename_WhenUnchanged_ShouldNotRaiseEvent()
     {
-        var title = LocalizedText.Create(("en", "Title"));
+        var title = LocalizedText.Create("en", "Title");
         var slug = Slug.Create("title");
         var work = Work.Register(
             Guid.NewGuid(),
@@ -199,6 +199,6 @@ public class WorkTests
     private static Work CreateWork() => Work.Register(
         Guid.NewGuid(),
         AccessionNumber.Create("INV-0001"),
-        LocalizedText.Create(("en", "Sample Work")),
+        LocalizedText.Create("en", "Sample Work"),
         Slug.Create("sample work"));
 }

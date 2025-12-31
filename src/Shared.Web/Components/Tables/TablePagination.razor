@@ -1,0 +1,74 @@
+<nav aria-label="Table pagination">
+    <ul class="pagination justify-content-center mb-0">
+        <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
+            <button class="page-link" @onclick="() => ChangePage(CurrentPage - 1)" disabled="@(CurrentPage == 1)">
+                Previous
+            </button>
+        </li>
+
+        @for (int i = StartPage; i <= EndPage; i++)
+        {
+            var pageNumber = i;
+            <li class="page-item @(CurrentPage == pageNumber ? "active" : "")">
+                <button class="page-link" @onclick="() => ChangePage(pageNumber)">
+                    @pageNumber
+                </button>
+            </li>
+        }
+
+        <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
+            <button class="page-link" @onclick="() => ChangePage(CurrentPage + 1)" disabled="@(CurrentPage == TotalPages)">
+                Next
+            </button>
+        </li>
+    </ul>
+</nav>
+
+<div class="text-center mt-2 text-muted small">
+    Showing @((CurrentPage - 1) * PageSize + 1) to @Math.Min(CurrentPage * PageSize, TotalItems) of @TotalItems items
+</div>
+
+@code {
+    [Parameter]
+    public int CurrentPage { get; set; } = 1;
+
+    [Parameter]
+    public int PageSize { get; set; } = 10;
+
+    [Parameter]
+    public int TotalItems { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnPageChanged { get; set; }
+
+    [Parameter]
+    public int MaxPagesToShow { get; set; } = 5;
+
+    private int TotalPages => (int)Math.Ceiling(TotalItems / (double)PageSize);
+
+    private int StartPage
+    {
+        get
+        {
+            var start = CurrentPage - MaxPagesToShow / 2;
+            return Math.Max(1, start);
+        }
+    }
+
+    private int EndPage
+    {
+        get
+        {
+            var end = StartPage + MaxPagesToShow - 1;
+            return Math.Min(TotalPages, end);
+        }
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page >= 1 && page <= TotalPages && page != CurrentPage)
+        {
+            await OnPageChanged.InvokeAsync(page);
+        }
+    }
+}

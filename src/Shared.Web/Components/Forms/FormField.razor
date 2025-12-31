@@ -1,0 +1,41 @@
+<div class="form-field mb-3">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="form-label">
+            @Label
+            @if (IsRequired)
+            {
+                <span class="text-danger">*</span>
+            }
+        </label>
+    }
+    
+    @ChildContent
+    
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <small class="form-text text-muted d-block">@HelpText</small>
+    }
+    
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="text-danger small mt-1">@ErrorMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? Label { get; set; }
+
+    [Parameter]
+    public bool IsRequired { get; set; }
+
+    [Parameter]
+    public string? HelpText { get; set; }
+
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

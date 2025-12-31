@@ -1,0 +1,49 @@
+@inherits ErrorBoundaryBase
+
+<CascadingValue Value="this">
+    @ChildContent
+</CascadingValue>
+
+@if (CurrentException != null)
+{
+    <div class="alert alert-danger m-3" role="alert">
+        <h4 class="alert-heading">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            An error has occurred
+        </h4>
+        <p>@ErrorMessage</p>
+        @if (ShowDetails)
+        {
+            <hr>
+            <p class="mb-0 small">
+                <strong>Details:</strong><br />
+                @CurrentException.Message
+            </p>
+        }
+        <button class="btn btn-sm btn-outline-danger mt-3" @onclick="RecoverError">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Try Again
+        </button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public new RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string ErrorMessage { get; set; } = "Something went wrong. Please try again.";
+
+    [Parameter]
+    public bool ShowDetails { get; set; } = false;
+
+    protected override Task OnErrorAsync(Exception exception)
+    {
+        return Task.CompletedTask;
+    }
+
+    private void RecoverError()
+    {
+        base.Recover();
+    }
+}

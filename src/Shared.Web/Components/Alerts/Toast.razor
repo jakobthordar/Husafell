@@ -1,0 +1,75 @@
+@if (IsVisible)
+{
+    <div class="toast show @ToastClass" role="alert">
+        <div class="toast-header">
+            <i class="bi @IconClass me-2"></i>
+            <strong class="me-auto">@Title</strong>
+            <small>@Timestamp</small>
+            <button type="button" class="btn-close" @onclick="Close"></button>
+        </div>
+        <div class="toast-body">
+            @Message
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "Notification";
+
+    [Parameter]
+    public string Message { get; set; } = string.Empty;
+
+    [Parameter]
+    public AlertType Type { get; set; } = AlertType.Info;
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public int AutoDismissMs { get; set; } = 0;
+
+    private string Timestamp => DateTime.Now.ToString("HH:mm");
+
+    private string ToastClass => Type switch
+    {
+        AlertType.Success => "border-success",
+        AlertType.Error => "border-danger",
+        AlertType.Warning => "border-warning",
+        AlertType.Info => "border-info",
+        _ => ""
+    };
+
+    private string IconClass => Type switch
+    {
+        AlertType.Success => "bi-check-circle-fill text-success",
+        AlertType.Error => "bi-exclamation-circle-fill text-danger",
+        AlertType.Warning => "bi-exclamation-triangle-fill text-warning",
+        AlertType.Info => "bi-info-circle-fill text-info",
+        _ => "bi-info-circle-fill"
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && AutoDismissMs > 0)
+        {
+            await Task.Delay(AutoDismissMs);
+            await Close();
+        }
+    }
+
+    private async Task Close()
+    {
+        IsVisible = false;
+        await OnClose.InvokeAsync();
+    }
+}
+
+<style>
+    .toast {
+        border-width: 2px;
+    }
+</style>
