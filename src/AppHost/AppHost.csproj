@@ -11,4 +11,9 @@
     <ProjectReference Include="..\Catalog\Catalog.Api\Catalog.Api.csproj" />
     <ProjectReference Include="..\Media\Media.Api\Media.Api.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.Azure" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="9.5.2" />
+  </ItemGroup>
 </Project>
