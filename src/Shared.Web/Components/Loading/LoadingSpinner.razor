@@ -1,0 +1,20 @@
+<div class="loading-spinner">
+    <div class="spinner" style="@SpinnerStyle"></div>
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <p class="ms-3 mb-0">@Message</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public int Size { get; set; } = 40;
+
+    [Parameter]
+    public string Color { get; set; } = "var(--primary-color)";
+
+    private string SpinnerStyle => $"width: {Size}px; height: {Size}px; border-top-color: {Color};";
+}

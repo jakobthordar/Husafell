@@ -1,0 +1,35 @@
+<div class="skeleton-loader" style="@SkeletonStyle"></div>
+
+@code {
+    [Parameter]
+    public int Width { get; set; } = 100;
+
+    [Parameter]
+    public int Height { get; set; } = 20;
+
+    [Parameter]
+    public string WidthUnit { get; set; } = "%";
+
+    [Parameter]
+    public string HeightUnit { get; set; } = "px";
+
+    private string SkeletonStyle => $"width: {Width}{WidthUnit}; height: {Height}{HeightUnit};";
+}
+
+<style>
+    .skeleton-loader {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s ease-in-out infinite;
+        border-radius: var(--border-radius-sm);
+    }
+
+    @@keyframes loading {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+</style>

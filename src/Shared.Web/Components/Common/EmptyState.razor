@@ -1,0 +1,25 @@
+<div class="empty-state text-center py-5">
+    <i class="bi @Icon" style="font-size: 3rem; color: var(--secondary-color);"></i>
+    <h4 class="mt-3">@Title</h4>
+    <p class="text-muted">@Message</p>
+    @if (Actions != null)
+    {
+        <div class="mt-3">
+            @Actions
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Icon { get; set; } = "bi-inbox";
+
+    [Parameter]
+    public string Title { get; set; } = "No Data";
+
+    [Parameter]
+    public string Message { get; set; } = "There is no data to display at this time.";
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+}

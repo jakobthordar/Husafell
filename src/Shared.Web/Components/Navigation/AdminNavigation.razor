@@ -1,0 +1,59 @@
+<nav class="admin-navigation">
+    <div class="nav-header p-3 border-bottom">
+        <h4 class="mb-0 text-white">AspireClean</h4>
+    </div>
+    
+    <ul class="nav flex-column p-3">
+        <li class="nav-item mb-2">
+            <a href="/" class="nav-link text-white">
+                <i class="bi bi-house-door me-2"></i>
+                Dashboard
+            </a>
+        </li>
+        
+        <ModuleMenu 
+            Title="Catalog" 
+            Icon="bi-box-seam"
+            Links="@catalogLinks" />
+        
+        <ModuleMenu 
+            Title="Media" 
+            Icon="bi-image"
+            Links="@mediaLinks" />
+    </ul>
+</nav>
+
+@code {
+    private Dictionary<string, string> catalogLinks = new()
+    {
+        { "Products", "/catalog/products" },
+        { "Categories", "/catalog/categories" },
+        { "Inventory", "/catalog/inventory" }
+    };
+
+    private Dictionary<string, string> mediaLinks = new()
+    {
+        { "Files", "/media/files" },
+        { "Upload", "/media/upload" },
+        { "Gallery", "/media/gallery" }
+    };
+}
+
+<style>
+    .admin-navigation .nav-link {
+        border-radius: var(--border-radius-sm);
+        transition: background-color var(--transition-speed);
+    }
+
+    .admin-navigation .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .admin-navigation .nav-link.active {
+        background-color: var(--primary-color);
+    }
+
+    .nav-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+</style>
