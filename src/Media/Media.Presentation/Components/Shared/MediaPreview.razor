@@ -1,0 +1,163 @@
+@namespace Media.Presentation.Components.Shared
+
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="media-preview">
+    @if (string.IsNullOrEmpty(Url))
+    {
+        <div class="media-placeholder">
+            <i class="@GetIconClass(ContentType) media-icon"></i>
+        </div>
+    }
+    else if (IsImageType(ContentType))
+    {
+        <img src="@Url" alt="@FileName" class="media-image" loading="lazy" />
+    }
+    else if (IsVideoType(ContentType))
+    {
+        <video src="@Url" class="media-video" controls>
+            <span>Video not supported</span>
+        </video>
+    }
+    else if (IsAudioType(ContentType))
+    {
+        <audio src="@Url" class="media-audio" controls>
+            <span>Audio not supported</span>
+        </audio>
+    }
+    else if (IsPdfType(ContentType))
+    {
+        <iframe src="@Url" class="media-pdf"></iframe>
+    }
+    else
+    {
+        <div class="media-placeholder">
+            <i class="@GetIconClass(ContentType) media-icon"></i>
+            <small class="mt-2 text-muted text-truncate d-block">@FileName</small>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// The URL of the media asset.
+    /// </summary>
+    [Parameter]
+    public string Url { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The MIME type of the media asset.
+    /// </summary>
+    [Parameter]
+    public string ContentType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The file name of the media asset.
+    /// </summary>
+    [Parameter]
+    public string FileName { get; set; } = string.Empty;
+
+    private static bool IsImageType(string contentType) =>
+        contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsVideoType(string contentType) =>
+        contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAudioType(string contentType) =>
+        contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsPdfType(string contentType) =>
+        contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase);
+
+    private static string GetIconClass(string contentType)
+    {
+        if (string.IsNullOrEmpty(contentType))
+            return "bi bi-file-earmark";
+
+        return contentType.ToLowerInvariant() switch
+        {
+            var ct when ct.StartsWith("image/") => "bi bi-file-earmark-image",
+            var ct when ct.StartsWith("video/") => "bi bi-file-earmark-play",
+            var ct when ct.StartsWith("audio/") => "bi bi-file-earmark-music",
+            "application/pdf" => "bi bi-file-earmark-pdf",
+            "application/msword" or "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "bi bi-file-earmark-word",
+            "application/vnd.ms-excel" or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => "bi bi-file-earmark-excel",
+            "application/vnd.ms-powerpoint" or "application/vnd.openxmlformats-officedocument.presentationml.presentation" => "bi bi-file-earmark-ppt",
+            "application/zip" or "application/x-zip-compressed" or "application/x-rar-compressed" => "bi bi-file-earmark-zip",
+            "text/plain" => "bi bi-file-earmark-text",
+            "application/json" => "bi bi-file-earmark-code",
+            _ => "bi bi-file-earmark"
+        };
+    }
+}
+
+@* Styles for the media preview component *@
+<style>
+    .media-preview {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 150px;
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        overflow: hidden;
+    }
+
+    .media-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+
+    .media-icon {
+        font-size: 4rem;
+        opacity: 0.7;
+    }
+
+    .media-image {
+        max-width: 100%;
+        max-height: 300px;
+        object-fit: contain;
+    }
+
+    .media-video {
+        max-width: 100%;
+        max-height: 400px;
+    }
+
+    .media-audio {
+        width: 100%;
+    }
+
+    .media-pdf {
+        width: 100%;
+        min-height: 400px;
+        border: none;
+    }
+
+    .upload-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: border-color 0.2s ease-in-out;
+    }
+
+    .upload-zone:hover {
+        border-color: #0d6efd;
+        background-color: #f8f9fa;
+    }
+
+    .asset-card {
+        cursor: pointer;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .asset-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+</style>
