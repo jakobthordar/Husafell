@@ -181,7 +181,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
 
         // Retrieve from cache
         var cachedJson = await _redisDatabase.StringGetAsync(cacheKey);
-        var retrievedFromCache = JsonSerializer.Deserialize<CachedWork>(cachedJson);
+        var retrievedFromCache = JsonSerializer.Deserialize<CachedWork>((ReadOnlySpan<byte>)cachedJson);
 
         // Retrieve from database for comparison
         var fromDatabase = await _catalogContext.Works.FindAsync(work.Id);
@@ -235,7 +235,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         cachedResult = await _redisDatabase.StringGetAsync(cacheKey);
         Assert.False(cachedResult.IsNull, "Cache should contain data");
 
-        var cachedWork = JsonSerializer.Deserialize<CachedWork>(cachedResult);
+        var cachedWork = JsonSerializer.Deserialize<CachedWork>((ReadOnlySpan<byte>)cachedResult);
         Assert.NotNull(cachedWork);
         Assert.Equal(work.Id, cachedWork!.Id);
         Assert.Equal(work.Title.DefaultText, cachedWork.Title);
@@ -272,7 +272,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
 
         // Verify both contain the data
         var fromDb = await _catalogContext.Works.FindAsync(work.Id);
-        var fromCache = JsonSerializer.Deserialize<CachedWork>(await _redisDatabase.StringGetAsync(cacheKey));
+        var fromCache = JsonSerializer.Deserialize<CachedWork>((ReadOnlySpan<byte>)await _redisDatabase.StringGetAsync(cacheKey));
 
         // Assert
         Assert.NotNull(fromDb);
@@ -311,7 +311,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         await _redisDatabase!.StringSetAsync(cacheKey, JsonSerializer.Serialize(originalCache));
 
         // Verify cache has original data
-        var cachedBefore = JsonSerializer.Deserialize<CachedWork>(await _redisDatabase.StringGetAsync(cacheKey));
+        var cachedBefore = JsonSerializer.Deserialize<CachedWork>((ReadOnlySpan<byte>)await _redisDatabase.StringGetAsync(cacheKey));
         Assert.NotNull(cachedBefore);
         Assert.Equal("Original Title", cachedBefore!.Title);
 

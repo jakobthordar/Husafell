@@ -119,17 +119,17 @@ public class ApiIntegrationTestContainerFixture : IAsyncLifetime
             Work.Register(
                 id: Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 accessionNumber: AccessionNumber.Create("API-TEST-001"),
-                title: LocalizedText.Create(("en", "API Test Work 1")),
+                title: LocalizedText.Create("en", "API Test Work 1"),
                 slug: Slug.Create("api-test-work-1"),
-                description: LocalizedText.Create(("en", "First API test work")),
+                description: LocalizedText.Create("en", "First API test work"),
                 dimensions: Dimensions.Create(10.0m, 20.0m, null, MeasurementUnit.Centimetres)),
                 
             Work.Register(
                 id: Guid.Parse("22222222-2222-2222-2222-222222222222"),
                 accessionNumber: AccessionNumber.Create("API-TEST-002"),
-                title: LocalizedText.Create(("en", "API Test Work 2")),
+                title: LocalizedText.Create("en", "API Test Work 2"),
                 slug: Slug.Create("api-test-work-2"),
-                description: LocalizedText.Create(("en", "Second API test work")),
+                description: LocalizedText.Create("en", "Second API test work"),
                 dimensions: Dimensions.Create(30.0m, 40.0m, null, MeasurementUnit.Inches))
         };
 
@@ -137,13 +137,13 @@ public class ApiIntegrationTestContainerFixture : IAsyncLifetime
         testWorks[0].AddAsset(
             assetId: Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             fileName: "test-image-1.jpg",
-            caption: LocalizedText.Create(("en", "Test image 1")),
+            caption: LocalizedText.Create("en", "Test image 1"),
             isPrimary: true);
 
         testWorks[0].AddAsset(
             assetId: Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
             fileName: "test-image-2.jpg",
-            caption: LocalizedText.Create(("en", "Test image 2")),
+            caption: LocalizedText.Create("en", "Test image 2"),
             isPrimary: false);
 
         context.Works.AddRange(testWorks);
@@ -170,16 +170,16 @@ public class CatalogApiIntegrationTests : IAsyncLifetime
         _logger = new ConsoleLogger<CatalogApiIntegrationTests>();
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
         _logger.LogInformation("API integration tests initialized");
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _logger.LogInformation("API integration tests completed");
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Fact]
