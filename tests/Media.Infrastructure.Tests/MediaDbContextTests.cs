@@ -35,14 +35,14 @@ public class MediaDbContextTests : IAsyncLifetime
         return new MediaDbContext(options);
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _context = CreateContext();
         await DatabaseMigrationHelper.EnsureDatabaseCreatedAsync(_fixture.ConnectionString);
         _logger.LogInformation("Database created successfully");
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_context != null)
         {

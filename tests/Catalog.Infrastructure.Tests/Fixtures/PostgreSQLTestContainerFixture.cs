@@ -18,20 +18,17 @@ public class PostgreSQLTestContainerFixture : IAsyncLifetime
     {
         _logger = new ConsoleLogger<PostgreSQLTestContainerFixture>();
         
-        _container = new TestcontainersBuilder<PostgreSqlContainer>()
-            .WithDatabase(new PostgreSqlContainerConfiguration
-            {
-                Database = "test_catalog",
-                Username = "test_user",
-                Password = "test_password"
-            })
+        _container = new PostgreSqlBuilder()
             .WithImage("postgres:16-alpine")
+            .WithDatabase("test_catalog")
+            .WithUsername("test_user")
+            .WithPassword("test_password")
             .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5432))
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilContainerIsHealthy())
             .Build();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         try
         {
@@ -46,7 +43,7 @@ public class PostgreSQLTestContainerFixture : IAsyncLifetime
         }
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         try
         {

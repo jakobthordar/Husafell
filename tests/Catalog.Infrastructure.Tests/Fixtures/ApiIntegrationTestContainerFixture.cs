@@ -20,7 +20,7 @@ public class ApiIntegrationTestContainerFixture : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _container;
     private readonly ILogger<ApiIntegrationTestContainerFixture> _logger;
-    private WebApplicationFactory<Program>? _factory;
+    private WebApplicationFactory<Program> _factory;
     private HttpClient? _client;
 
     public string ConnectionString { get; private set; } = string.Empty;
@@ -30,20 +30,17 @@ public class ApiIntegrationTestContainerFixture : IAsyncLifetime
     {
         _logger = new ConsoleLogger<ApiIntegrationTestContainerFixture>();
         
-        _container = new TestcontainersBuilder<PostgreSqlContainer>()
-            .WithDatabase(new PostgreSqlContainerConfiguration
-            {
-                Database = "catalog_api_test",
-                Username = "api_test_user",
-                Password = "api_test_password"
-            })
+        _container = new PostgreSqlBuilder()
             .WithImage("postgres:16-alpine")
+            .WithDatabase("test_catalog")
+            .WithUsername("test_user")
+            .WithPassword("test_password")
             .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5432))
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilContainerIsHealthy())
             .Build();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         try
         {
@@ -100,7 +97,7 @@ public class ApiIntegrationTestContainerFixture : IAsyncLifetime
         }
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         try
         {

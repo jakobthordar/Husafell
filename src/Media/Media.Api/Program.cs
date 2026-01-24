@@ -15,3 +15,5 @@ app.MapGet("/library", (IMediaLibraryService service) => Results.Ok(service.GetL
 app.MapGet("/", () => Results.Ok("Media API"));
 
 app.Run();
+
+public partial class Program;

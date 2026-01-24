@@ -5,6 +5,8 @@ using Testcontainers.Redis;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using StackExchange.Redis;
+using System.Text.Json;
+using System.Linq;
 
 namespace Catalog.Infrastructure.Tests.Fixtures;
 
@@ -21,23 +23,23 @@ public class RedisTestContainerFixture : IAsyncLifetime
     {
         _logger = new ConsoleLogger<RedisTestContainerFixture>();
         
-        _container = new TestcontainersBuilder<RedisContainer>()
+        _container = new RedisBuilder()
             .WithImage("redis:7-alpine")
             .WithPortBinding(6379, true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(6379))
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilContainerIsHealthy())
             .Build();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         try
         {
             await _container.StartAsync();
             
-            var port = _container.GetMappedPublicPort(6379);
-            ConnectionString = $"localhost:{port}";
+            ConnectionString = _container.GetConnectionString();
             
             var options = ConfigurationOptions.Parse(ConnectionString);
+            options.AllowAdmin = true;
             _redis = await ConnectionMultiplexer.ConnectAsync(options);
             
             _logger.LogInformation("Redis test container started: {ConnectionString}", ConnectionString);
@@ -49,7 +51,7 @@ public class RedisTestContainerFixture : IAsyncLifetime
         }
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         try
         {
@@ -82,17 +84,18 @@ public class RedisIntegrationTests : IAsyncLifetime
         _logger = new ConsoleLogger<RedisIntegrationTests>();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _database = _fixture.Redis.GetDatabase();
-        await _database.KeyFlushAsync(); // Clear any existing data
+        var server = _fixture.Redis.GetServer(_fixture.Redis.GetEndPoints().Single());
+        await server.FlushDatabaseAsync();
         _logger.LogInformation("Redis database cleared and ready for testing");
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         // Redis cleanup is handled by the fixture
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Fact]
@@ -128,11 +131,11 @@ public class RedisIntegrationTests : IAsyncLifetime
         var serialized = JsonSerializer.Serialize(testObject);
         await _database!.StringSetAsync(key, serialized);
         var retrievedJson = await _database.StringGetAsync(key);
-        var retrievedObject = JsonSerializer.Deserialize<TestObject>(retrievedJson);
+        var retrievedObject = JsonSerializer.Deserialize<TestObject>((ReadOnlySpan<byte>)retrievedJson);
 
         // Assert
         Assert.NotNull(retrievedObject);
-        Assert.Equal(testObject.Id, retrievedObject.Id);
+        Assert.Equal(testObject.Id, retrievedObject!.Id);
         Assert.Equal(testObject.Name, retrievedObject.Name);
         Assert.Equal(testObject.Tags, retrievedObject.Tags);
 
@@ -196,7 +199,7 @@ public class RedisIntegrationTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(messages.Length, retrievedMessages.Count);
-        Assert.Equal(messages.Reverse(), retrievedMessages); // LPUSH adds to left, so order is reversed
+        Assert.Equal(messages.Reverse().ToArray(), retrievedMessages); // LPUSH adds to left, so order is reversed
 
         _logger.LogInformation("Successfully stored and retrieved list data");
     }

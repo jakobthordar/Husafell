@@ -1,54 +1,69 @@
-using Aspire.Hosting;
-using Aspire.Hosting.Azure;
-using Aspire.Hosting.Postgresql;
-using Microsoft.Extensions.Hosting;
-
 var builder = DistributedApplication.CreateBuilder(args);
 
-var environmentName = builder.Environment.EnvironmentName ?? Environments.Development;
-const string storageConnectionString = "UseDevelopmentStorage=true";
-const string catalogDbConnectionString = "Host=catalog-db;Port=5432;Username=catalog;Password=catalog_password;Database=catalog";
-const string mediaDbConnectionString = "Host=media-db;Port=5432;Username=media;Password=media_password;Database=media";
+var environmentName = builder.Environment.EnvironmentName;
 
-var catalogDbServer = builder.AddPostgres("catalog-db")
-    .WithDataVolume()
-    .WithEnvironment("POSTGRES_USER", "catalog")
-    .WithEnvironment("POSTGRES_PASSWORD", "catalog_password")
-    .WithEnvironment("POSTGRES_DB", "catalog");
+var catalogDbUser = builder.AddParameter("catalog-db-user", "catalog", publishValueAsDefault: true, secret: false);
+var catalogDbPassword = builder.AddParameter(
+    "catalog-db-password",
+    new GenerateParameterDefault
+    {
+        MinLength = 16,
+        Lower = true,
+        Upper = true,
+        Numeric = true,
+        Special = true,
+        MinLower = 1,
+        MinUpper = 1,
+        MinNumeric = 1,
+        MinSpecial = 1,
+    },
+    secret: true,
+    persist: true);
 
-var catalogDatabase = catalogDbServer.AddDatabase("catalog");
+var mediaDbUser = builder.AddParameter("media-db-user", "media", publishValueAsDefault: true, secret: false);
+var mediaDbPassword = builder.AddParameter(
+    "media-db-password",
+    new GenerateParameterDefault
+    {
+        MinLength = 16,
+        Lower = true,
+        Upper = true,
+        Numeric = true,
+        Special = true,
+        MinLower = 1,
+        MinUpper = 1,
+        MinNumeric = 1,
+        MinSpecial = 1,
+    },
+    secret: true,
+    persist: true);
 
-var mediaDbServer = builder.AddPostgres("media-db")
-    .WithDataVolume()
-    .WithEnvironment("POSTGRES_USER", "media")
-    .WithEnvironment("POSTGRES_PASSWORD", "media_password")
-    .WithEnvironment("POSTGRES_DB", "media");
+var catalogDbServer = builder
+    .AddPostgres("catalog-db", catalogDbUser, catalogDbPassword)
+    .WithDataVolume();
+
+var catalogDatabase = catalogDbServer
+    .AddDatabase("catalog");
+
+var mediaDbServer = builder
+    .AddPostgres("media-db", mediaDbUser, mediaDbPassword)
+    .WithDataVolume();
 
 var mediaDatabase = mediaDbServer.AddDatabase("media");
 
-var storage = builder.AddAzureStorage("storage");
-var blobStorage = storage.AddBlobs("media-assets");
-
-var catalogApi = builder.AddProject<Projects.Catalog_Api>("catalog-api")
+var catalogApi = builder
+    .AddProject<Projects.Catalog_Api>("catalog-api")
     .WithReference(catalogDatabase)
-    .WithReference(blobStorage)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", environmentName)
-    .WithEnvironment("DOTNET_ENVIRONMENT", environmentName)
-    .WithEnvironment("ConnectionStrings__Catalog", catalogDbConnectionString)
-    .WithEnvironment("ConnectionStrings__Storage", storageConnectionString)
-    .WithEnvironment("Storage__ConnectionString", storageConnectionString)
-    .WithEnvironment("ServiceDiscovery__Services__CatalogApi", "http://catalog-api")
-    .WithEnvironment("ServiceDiscovery__Services__MediaApi", "http://media-api");
+    .WithEnvironment("DOTNET_ENVIRONMENT", environmentName);
 
-var mediaApi = builder.AddProject<Projects.Media_Api>("media-api")
+var mediaApi = builder
+    .AddProject<Projects.Media_Api>("media-api")
     .WithReference(mediaDatabase)
-    .WithReference(blobStorage)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", environmentName)
-    .WithEnvironment("DOTNET_ENVIRONMENT", environmentName)
-    .WithEnvironment("ConnectionStrings__Media", mediaDbConnectionString)
-    .WithEnvironment("ConnectionStrings__Storage", storageConnectionString)
-    .WithEnvironment("Storage__ConnectionString", storageConnectionString)
-    .WithEnvironment("ServiceDiscovery__Services__CatalogApi", "http://catalog-api")
-    .WithEnvironment("ServiceDiscovery__Services__MediaApi", "http://media-api");
+    .WithEnvironment("DOTNET_ENVIRONMENT", environmentName);
+
+catalogApi.WithReference(mediaApi);
+mediaApi.WithReference(catalogApi);
 
 builder.Build().Run();

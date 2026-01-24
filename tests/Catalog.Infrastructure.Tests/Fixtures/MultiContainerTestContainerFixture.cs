@@ -11,6 +11,8 @@ using System.Text.Json;
 using Catalog.Infrastructure.Data;
 using Catalog.Domain.Works;
 using Catalog.Domain.Works.ValueObjects;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Catalog.Infrastructure.Tests.Fixtures;
 
@@ -30,36 +32,33 @@ public class MultiContainerTestContainerFixture : IAsyncLifetime
         _logger = new ConsoleLogger<MultiContainerTestContainerFixture>();
         
         // Create a shared network for container communication
-        _network = new TestcontainersNetworkBuilder()
+        _network = new NetworkBuilder()
             .WithName("test-network")
             .Build();
 
         // PostgreSQL container
-        _postgresContainer = new TestcontainersBuilder<PostgreSqlContainer>()
+        _postgresContainer = new PostgreSqlBuilder()
             .WithNetwork(_network)
             .WithNetworkAliases("catalog-db")
-            .WithDatabase(new PostgreSqlContainerConfiguration
-            {
-                Database = "catalog_integration",
-                Username = "integration_user",
-                Password = "integration_password"
-            })
+            .WithDatabase("catalog_integration")
+            .WithUsername("integration_user")
+            .WithPassword("integration_password")
             .WithImage("postgres:16-alpine")
             .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5432))
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilContainerIsHealthy())
             .Build();
 
         // Redis container
-        _redisContainer = new TestcontainersBuilder<RedisContainer>()
+        _redisContainer = new RedisBuilder()
             .WithNetwork(_network)
             .WithNetworkAliases("catalog-cache")
             .WithImage("redis:7-alpine")
             .WithPortBinding(6379, true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(6379))
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilContainerIsHealthy())
             .Build();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         try
         {
@@ -73,9 +72,9 @@ public class MultiContainerTestContainerFixture : IAsyncLifetime
 
             PostgreSQLConnectionString = _postgresContainer.GetConnectionString();
             
-            var redisPort = _redisContainer.GetMappedPublicPort(6379);
-            var redisConnectionString = $"localhost:{redisPort}";
+            var redisConnectionString = _redisContainer.GetConnectionString();
             var options = ConfigurationOptions.Parse(redisConnectionString);
+            options.AllowAdmin = true;
             _redis = await ConnectionMultiplexer.ConnectAsync(options);
 
             _logger.LogInformation("Multi-container setup completed:");
@@ -89,7 +88,7 @@ public class MultiContainerTestContainerFixture : IAsyncLifetime
         }
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         try
         {
@@ -125,7 +124,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         _logger = new ConsoleLogger<MultiContainerIntegrationTests>();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         // Initialize database context
         var dbOptions = new DbContextOptionsBuilder<CatalogDbContext>()
@@ -137,12 +136,13 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
 
         // Initialize Redis
         _redisDatabase = _fixture.Redis.GetDatabase();
-        await _redisDatabase.KeyFlushAsync();
+        var server = _fixture.Redis.GetServer(_fixture.Redis.GetEndPoints().Single());
+        await server.FlushDatabaseAsync();
 
         _logger.LogInformation("Multi-container tests initialized successfully");
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_catalogContext != null)
         {
@@ -157,9 +157,9 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         var work = Work.Register(
             id: Guid.NewGuid(),
             accessionNumber: AccessionNumber.Create("CACHE-001"),
-            title: LocalizedText.Create(("en", "Cached Work")),
+            title: LocalizedText.Create("en", "Cached Work"),
             slug: Slug.Create("cached-work"),
-            description: LocalizedText.Create(("en", "A work that will be cached")),
+            description: LocalizedText.Create("en", "A work that will be cached"),
             dimensions: Dimensions.Create(20.0m, 30.0m, null, MeasurementUnit.Centimetres));
 
         // Act - Save to database
@@ -171,7 +171,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         var cachedWork = new CachedWork
         {
             Id = work.Id,
-            Title = work.Title.Value,
+            Title = work.Title.DefaultText,
             AccessionNumber = work.AccessionNumber.Value,
             Slug = work.Slug.Value,
             CachedAt = DateTime.UtcNow
@@ -189,8 +189,8 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         // Assert
         Assert.NotNull(retrievedFromCache);
         Assert.NotNull(fromDatabase);
-        Assert.Equal(work.Id, retrievedFromCache.Id);
-        Assert.Equal(work.Title.Value, retrievedFromCache.Title);
+        Assert.Equal(work.Id, retrievedFromCache!.Id);
+        Assert.Equal(work.Title.DefaultText, retrievedFromCache.Title);
         Assert.Equal(work.AccessionNumber.Value, retrievedFromCache.AccessionNumber);
 
         _logger.LogInformation("Successfully demonstrated PostgreSQL + Redis caching scenario");
@@ -211,7 +211,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         var work = Work.Register(
             id: workId,
             accessionNumber: AccessionNumber.Create("ASIDE-001"),
-            title: LocalizedText.Create(("en", "Cache-Aside Work")),
+            title: LocalizedText.Create("en", "Cache-Aside Work"),
             slug: Slug.Create("cache-aside-work"),
             dimensions: Dimensions.Create(15.0m, 25.0m, null, MeasurementUnit.Inches));
 
@@ -222,8 +222,8 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         var fromDb = await _catalogContext.Works.FindAsync(workId);
         var cacheData = new CachedWork
         {
-            Id = fromDb.Id,
-            Title = fromDb.Title.Value,
+            Id = fromDb!.Id,
+            Title = fromDb.Title.DefaultText,
             AccessionNumber = fromDb.AccessionNumber.Value,
             Slug = fromDb.Slug.Value,
             CachedAt = DateTime.UtcNow
@@ -236,8 +236,9 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         Assert.False(cachedResult.IsNull, "Cache should contain data");
 
         var cachedWork = JsonSerializer.Deserialize<CachedWork>(cachedResult);
-        Assert.Equal(work.Id, cachedWork.Id);
-        Assert.Equal(work.Title.Value, cachedWork.Title);
+        Assert.NotNull(cachedWork);
+        Assert.Equal(work.Id, cachedWork!.Id);
+        Assert.Equal(work.Title.DefaultText, cachedWork.Title);
 
         _logger.LogInformation("Successfully implemented cache-aside pattern");
     }
@@ -249,7 +250,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         var work = Work.Register(
             id: Guid.NewGuid(),
             accessionNumber: AccessionNumber.Create("WRITETHRU-001"),
-            title: LocalizedText.Create(("en", "Write-Through Work")),
+            title: LocalizedText.Create("en", "Write-Through Work"),
             slug: Slug.Create("write-through-work"),
             dimensions: Dimensions.Create(10.0m, 20.0m, null, MeasurementUnit.Centimetres));
 
@@ -261,7 +262,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         var cacheData = new CachedWork
         {
             Id = work.Id,
-            Title = work.Title.Value,
+            Title = work.Title.DefaultText,
             AccessionNumber = work.AccessionNumber.Value,
             Slug = work.Slug.Value,
             CachedAt = DateTime.UtcNow
@@ -276,8 +277,8 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         // Assert
         Assert.NotNull(fromDb);
         Assert.NotNull(fromCache);
-        Assert.Equal(fromDb.Id, fromCache.Id);
-        Assert.Equal(fromDb.Title.Value, fromCache.Title);
+        Assert.Equal(fromDb!.Id, fromCache!.Id);
+        Assert.Equal(fromDb.Title.DefaultText, fromCache.Title);
         Assert.Equal(fromDb.AccessionNumber.Value, fromCache.AccessionNumber);
 
         _logger.LogInformation("Successfully demonstrated write-through caching");
@@ -290,7 +291,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         var work = Work.Register(
             id: Guid.NewGuid(),
             accessionNumber: AccessionNumber.Create("INVALIDATE-001"),
-            title: LocalizedText.Create(("en", "Original Title")),
+            title: LocalizedText.Create("en", "Original Title"),
             slug: Slug.Create("original-title"),
             dimensions: Dimensions.Create(25.0m, 35.0m, null, MeasurementUnit.Centimetres));
 
@@ -301,7 +302,7 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
         var originalCache = new CachedWork
         {
             Id = work.Id,
-            Title = work.Title.Value,
+            Title = work.Title.DefaultText,
             AccessionNumber = work.AccessionNumber.Value,
             Slug = work.Slug.Value,
             CachedAt = DateTime.UtcNow
@@ -311,10 +312,11 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
 
         // Verify cache has original data
         var cachedBefore = JsonSerializer.Deserialize<CachedWork>(await _redisDatabase.StringGetAsync(cacheKey));
-        Assert.Equal("Original Title", cachedBefore.Title);
+        Assert.NotNull(cachedBefore);
+        Assert.Equal("Original Title", cachedBefore!.Title);
 
         // Act - Update the database and invalidate cache
-        work.UpdateTitle(LocalizedText.Create(("en", "Updated Title")));
+        work.UpdateDescription(LocalizedText.Create("en", "Updated Description"));
         await _catalogContext.SaveChangesAsync();
 
         // Invalidate cache
@@ -326,7 +328,8 @@ public class MultiContainerIntegrationTests : IAsyncLifetime
 
         // Verify database has updated data
         var fromDb = await _catalogContext.Works.FindAsync(work.Id);
-        Assert.Equal("Updated Title", fromDb.Title.Value);
+        Assert.NotNull(fromDb);
+        Assert.Equal("Updated Description", fromDb!.Description?.DefaultText);
 
         _logger.LogInformation("Successfully demonstrated cache invalidation");
     }
