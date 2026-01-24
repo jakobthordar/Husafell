@@ -1,0 +1,36 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/AppHost/AppHost.csproj" />
+    <Project Path="src/ServiceDefaults/ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/src/Catalog/">
+    <Project Path="src/Catalog/Catalog.Api/Catalog.Api.csproj" />
+    <Project Path="src/Catalog/Catalog.Application/Catalog.Application.csproj" />
+    <Project Path="src/Catalog/Catalog.Domain/Catalog.Domain.csproj" />
+    <Project Path="src/Catalog/Catalog.Infrastructure/Catalog.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Media/">
+    <Project Path="src/Media/Media.Api/Media.Api.csproj" />
+    <Project Path="src/Media/Media.Application/Media.Application.csproj" />
+    <Project Path="src/Media/Media.Domain/Media.Domain.csproj" />
+    <Project Path="src/Media/Media.Infrastructure/Media.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="src/Shared.Web/Shared.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Catalog/">
+    <Project Path="tests/Catalog.Application.Tests/Catalog.Application.Tests.csproj" />
+    <Project Path="tests/Catalog.Domain.Tests/Catalog.Domain.Tests.csproj" />
+    <Project Path="tests/Catalog.Infrastructure.Tests/Catalog.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Media/">
+    <Project Path="tests/Media.Application.Tests/Media.Application.Tests.csproj" />
+    <Project Path="tests/Media.Infrastructure.Tests/Media.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
