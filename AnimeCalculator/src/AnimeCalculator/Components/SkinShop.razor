@@ -1,0 +1,196 @@
+@using System.Globalization
+@using AnimeCalculator.Core.Progress
+@using AnimeCalculator.Core.Skins
+@implements IDisposable
+
+<div class="overlay" @onclick="OnClose">
+    <div class="shop" role="dialog" aria-modal="true" aria-label="Skin store" @onclick:stopPropagation="true">
+        <header class="shop-header">
+            <div>
+                <h2>💎 Kawaii Skin Store</h2>
+                <div class="countdown">⏰ MEGA SALE ends in <strong>@Countdown</strong> &nbsp;·&nbsp; up to 80% OFF!</div>
+            </div>
+            <button class="close" @onclick="OnClose" aria-label="Close store">✕</button>
+        </header>
+
+        <nav class="tabs">
+            @foreach (var tab in Enum.GetValues<Tab>())
+            {
+                <button class="tab @(tab == _tab ? "active" : "")" @onclick="() => _tab = tab">@TabLabel(tab)</button>
+            }
+        </nav>
+
+        <div class="shop-body">
+            @if (_tab == Tab.Premium)
+            {
+                <div class="bundle">
+                    <div>
+                        <strong>🎁 ULTIMATE WAIFU BUNDLE</strong>
+                        <span>Every premium skin. Best value!! Only for true fans.</span>
+                    </div>
+                    <button class="buy" disabled="@(!UnownedPremium.Any())" @onclick="AddBundle">
+                        @(UnownedPremium.Any() ? "Add all to cart" : "You own them all ♡")
+                    </button>
+                </div>
+            }
+
+            <div class="grid">
+                @foreach (var skin in VisibleSkins)
+                {
+                    var owned = Profile.Owns(skin.Id);
+                    var equipped = Profile.SelectedSkinId == skin.Id;
+                    <article class="card rarity-border-@skin.Rarity.ToString().ToLowerInvariant() @(owned ? "" : "locked")" @key="skin.Id">
+                        @if (skin.OriginalPrice is { } was && !owned)
+                        {
+                            <div class="ribbon">-@Discount(skin.Price!.Value, was)%</div>
+                        }
+                        <div class="preview" style="background:linear-gradient(160deg, @skin.Palette.Background1, @skin.Palette.Background2)">
+                            <Mascot Skin="skin" Mood="@(owned ? Mood.Happy : Mood.Idle)" Small="true" />
+                            @if (!owned && skin.IsUnlockable)
+                            {
+                                <div class="lock">🔒</div>
+                            }
+                        </div>
+                        <div class="card-body">
+                            <div class="card-title">
+                                <strong>@skin.Name</strong>
+                                <span class="rarity rarity-@skin.Rarity.ToString().ToLowerInvariant()">@skin.Rarity</span>
+                            </div>
+                            <div class="card-character">@skin.CharacterName</div>
+                            <p class="tagline">@skin.Tagline</p>
+
+                            @if (owned)
+                            {
+                                <button class="buy equip" disabled="@equipped" @onclick="() => OnEquip.InvokeAsync(skin)">
+                                    @(equipped ? "Equipped ✓" : "Equip")
+                                </button>
+                            }
+                            else if (skin.IsPremium)
+                            {
+                                <div class="price-row">
+                                    <span class="price">@Money(skin.Price!.Value)</span>
+                                    @if (skin.OriginalPrice is { } original)
+                                    {
+                                        <s>@Money(original)</s>
+                                    }
+                                </div>
+                                <div class="social-proof">🔥 @SocialProof(skin) bought today</div>
+                                <button class="buy @(_cart.Contains(skin) ? "in-cart" : "")" @onclick="() => ToggleCart(skin)">
+                                    @(_cart.Contains(skin) ? "In cart ✓" : "Add to cart")
+                                </button>
+                            }
+                            else if (skin.Unlock is { } rule)
+                            {
+                                <div class="challenge">🏆 @rule.Description</div>
+                                @if (rule is CalculationsAtLeast c)
+                                {
+                                    var pct = Math.Min(100, Profile.Calculations * 100 / c.Count);
+                                    <div class="progress"><div style="width:@(pct)%"></div></div>
+                                    <small>@Math.Min(Profile.Calculations, c.Count) / @c.Count</small>
+                                }
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        </div>
+
+        @if (_cart.Count > 0)
+        {
+            <footer class="cart-bar">
+                <span>🛒 @_cart.Count item@(_cart.Count == 1 ? "" : "s") · <strong>@Money(_cart.Sum(s => s.Price!.Value))</strong></span>
+                <button class="buy checkout" @onclick="StartCheckout">Checkout →</button>
+            </footer>
+        }
+    </div>
+
+    @if (_checkoutSkins is { Count: > 0 })
+    {
+        <CheckoutDialog Skins="_checkoutSkins"
+                        PretendMoneySpentSoFar="Profile.PretendMoneySpent"
+                        OnCancel="() => _checkoutSkins = null"
+                        OnPurchased="CompletePurchase"
+                        OnEquip="EquipAndClose" />
+    }
+</div>
+
+@code {
+    private enum Tab { Premium, Challenges, Wardrobe }
+
+    private static readonly CultureInfo Usd = CultureInfo.GetCultureInfo("en-US");
+
+    [Parameter, EditorRequired] public PlayerProfile Profile { get; set; } = new();
+    [Parameter] public EventCallback<Skin> OnEquip { get; set; }
+    [Parameter] public EventCallback<(IReadOnlyList<Skin> Skins, decimal Total)> OnPurchased { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private readonly List<Skin> _cart = [];
+    private Tab _tab = Tab.Premium;
+    private List<Skin>? _checkoutSkins;
+    private Timer? _timer;
+    private int _secondsLeft = 9 * 60 + 59;
+
+    private string Countdown => TimeSpan.FromSeconds(_secondsLeft).ToString(@"mm\:ss");
+
+    private IEnumerable<Skin> UnownedPremium => SkinCatalog.All.Where(s => s.IsPremium && !Profile.Owns(s.Id));
+
+    private IEnumerable<Skin> VisibleSkins => _tab switch
+    {
+        Tab.Premium => SkinCatalog.All.Where(s => s.IsPremium),
+        Tab.Challenges => SkinCatalog.All.Where(s => s.IsUnlockable),
+        _ => SkinCatalog.All.Where(s => Profile.Owns(s.Id)),
+    };
+
+    protected override void OnInitialized()
+    {
+        // The sale is always ending soon. It never actually ends. Classic.
+        _timer = new Timer(_ => InvokeAsync(() =>
+        {
+            _secondsLeft = _secondsLeft <= 0 ? 9 * 60 + 59 : _secondsLeft - 1;
+            StateHasChanged();
+        }), null, 1000, 1000);
+    }
+
+    private string TabLabel(Tab tab) => tab switch
+    {
+        Tab.Premium => "✨ Premium",
+        Tab.Challenges => "🏆 Challenges",
+        _ => $"👗 My wardrobe ({Profile.OwnedSkinIds.Count})",
+    };
+
+    private void ToggleCart(Skin skin)
+    {
+        if (!_cart.Remove(skin)) _cart.Add(skin);
+    }
+
+    private void StartCheckout() => _checkoutSkins = [.. _cart];
+
+    private void AddBundle()
+    {
+        foreach (var skin in UnownedPremium.Where(s => !_cart.Contains(s))) _cart.Add(skin);
+    }
+
+    private async Task CompletePurchase((IReadOnlyList<Skin> Skins, decimal Total) purchase)
+    {
+        _cart.Clear();
+        await OnPurchased.InvokeAsync(purchase);
+    }
+
+    private async Task EquipAndClose(Skin skin)
+    {
+        _checkoutSkins = null;
+        await OnEquip.InvokeAsync(skin);
+        await OnClose.InvokeAsync();
+    }
+
+    private static string Money(decimal amount) => amount.ToString("C", Usd);
+
+    private static int Discount(decimal price, decimal original) =>
+        (int)Math.Round((1 - price / original) * 100);
+
+    // Totally real numbers. Deterministic so they don't flicker.
+    private static string SocialProof(Skin skin) =>
+        (skin.Id.Aggregate(17, (h, c) => h * 31 + c) % 9000 + 1000).ToString("N0", Usd).TrimStart('-');
+
+    public void Dispose() => _timer?.Dispose();
+}

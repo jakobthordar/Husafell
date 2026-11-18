@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AnimeCalculator.Core/AnimeCalculator.Core.csproj" />
+    <Project Path="src/AnimeCalculator/AnimeCalculator.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AnimeCalculator.Tests/AnimeCalculator.Tests.csproj" />
+  </Folder>
+</Solution>
