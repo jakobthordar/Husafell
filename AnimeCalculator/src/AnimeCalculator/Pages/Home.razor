@@ -1,0 +1,306 @@
+@page "/"
+@using AnimeCalculator.Core.Calculator
+@using AnimeCalculator.Core.Progress
+@using AnimeCalculator.Core.Skins
+@using AnimeCalculator.Components
+@using AnimeCalculator.Services
+@inject ProfileStore Store
+@implements IDisposable
+
+<PageTitle>Kawaii Kalc ✿ @Skin.CharacterName</PageTitle>
+
+<div class="app" style="@ThemeStyle" tabindex="0" @ref="_root" @onkeydown="OnKeyDown">
+    <header class="topbar">
+        <div class="brand">✿ Kawaii Kalc</div>
+        <button class="shop-btn" @onclick="OpenShop">
+            💎 Skin Store
+            <span class="sale-badge">SALE</span>
+        </button>
+    </header>
+
+    <main class="stage">
+        <section class="character" aria-live="polite">
+            <div class="bubble">@_speech</div>
+            <div class="mascot-wrap">
+                <Mascot Skin="Skin" Mood="_mood" />
+            </div>
+            <div class="nameplate">
+                <strong>@Skin.CharacterName</strong>
+                <span>@Skin.Name</span>
+                <span class="rarity rarity-@Skin.Rarity.ToString().ToLowerInvariant()">@Skin.Rarity</span>
+            </div>
+        </section>
+
+        <section class="calc" aria-label="Calculator">
+            <div class="display @(_engine.HasError ? "error" : "")">
+                <div class="expression">@(_engine.Expression.Length > 0 ? _engine.Expression : " ")</div>
+                <div class="value @(DisplaySizeClass)" data-testid="display">@_engine.Display</div>
+            </div>
+
+            <div class="keypad">
+                <button class="key fn" @onclick="() => Do(_engine.Clear())">AC</button>
+                <button class="key fn" @onclick="() => Do(_engine.Backspace())" aria-label="Backspace">⌫</button>
+                <button class="key fn" @onclick="() => Do(_engine.Percent())">%</button>
+                <button class="key op" @onclick="() => Do(_engine.SetOperator(Operator.Divide))">÷</button>
+
+                @foreach (var row in new[] { new[] { 7, 8, 9 }, new[] { 4, 5, 6 }, new[] { 1, 2, 3 } })
+                {
+                    foreach (var d in row)
+                    {
+                        var digit = d;
+                        <button class="key" @onclick="() => Do(_engine.InputDigit(digit))">@digit</button>
+                    }
+                    var op = row[0] switch { 7 => Operator.Multiply, 4 => Operator.Subtract, _ => Operator.Add };
+                    <button class="key op" @onclick="() => Do(_engine.SetOperator(op))">@CalculatorEngine.Symbol(op)</button>
+                }
+
+                <button class="key fn" @onclick="() => Do(_engine.ToggleSign())" aria-label="Toggle sign">±</button>
+                <button class="key" @onclick="() => Do(_engine.InputDigit(0))">0</button>
+                <button class="key" @onclick="() => Do(_engine.InputDecimalPoint())">.</button>
+                <button class="key eq" @onclick="() => Do(_engine.Evaluate())">=</button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="stats">
+        <span>🧮 @_profile.Calculations calculations</span>
+        <span>👗 @_profile.OwnedSkinIds.Count / @SkinCatalog.All.Count skins</span>
+        @if (NextChallenge is { } next)
+        {
+            <span class="hint">🔒 Next unlock: @next.Unlock!.Description</span>
+        }
+        @if (_profile.PretendMoneySpent > 0)
+        {
+            <span>💸 Pretend money spent: @_profile.PretendMoneySpent.ToString("C", Usd)</span>
+        }
+    </footer>
+
+    <div class="toasts">
+        @foreach (var toast in _toasts)
+        {
+            <div class="toast" @key="toast">
+                <Mascot Skin="toast" Mood="Mood.Love" Small="true" />
+                <div>
+                    <strong>New skin unlocked!</strong>
+                    <span>@toast.CharacterName · @toast.Name</span>
+                </div>
+                <button class="toast-equip" @onclick="() => Equip(toast)">Equip</button>
+            </div>
+        }
+    </div>
+
+    @if (_shopOpen)
+    {
+        <SkinShop Profile="_profile"
+                  OnEquip="Equip"
+                  OnPurchased="OnPurchased"
+                  OnClose="CloseShop" />
+    }
+</div>
+
+@code {
+    private static readonly System.Globalization.CultureInfo Usd = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+
+    private readonly CalculatorEngine _engine = new();
+    private readonly List<Skin> _toasts = [];
+    private readonly Random _random = new();
+    private PlayerProfile _profile = new();
+    private ElementReference _root;
+    private Mood _mood = Mood.Idle;
+    private string _speech = "Konnichiwa! Let's do some math together~";
+    private bool _shopOpen;
+    private CancellationTokenSource? _moodReset;
+
+    private Skin Skin => _profile.SelectedSkin;
+
+    private Skin? NextChallenge => SkinCatalog.All.FirstOrDefault(s => s.IsUnlockable && !_profile.Owns(s.Id));
+
+    private string DisplaySizeClass => _engine.Display.Length switch
+    {
+        > 13 => "tiny",
+        > 9 => "small",
+        _ => ""
+    };
+
+    private string ThemeStyle
+    {
+        get
+        {
+            var p = Skin.Palette;
+            return $"--bg1:{p.Background1};--bg2:{p.Background2};--panel:{p.Panel};--display:{p.Display};" +
+                   $"--display-text:{p.DisplayText};--key:{p.Key};--key-text:{p.KeyText};--op:{p.OperatorKey};" +
+                   $"--op-text:{p.OperatorKeyText};--accent:{p.Accent};--text:{p.Text};";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _profile = await Store.LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await _root.FocusAsync();
+    }
+
+    private void Do(CalculatorEvent e)
+    {
+        switch (e)
+        {
+            case CalculatorEvent.Input:
+                if (_mood != Mood.Thinking) SetMood(Mood.Thinking, Pick(ThinkingLines), resetAfterMs: 4000);
+                break;
+            case CalculatorEvent.Evaluated:
+                ReactToResult(_engine.LastResult ?? 0);
+                break;
+            case CalculatorEvent.DivideByZero:
+                SetMood(Mood.Shocked, "N-nani?! You can't divide by zero, baka! (╯°□°)╯");
+                break;
+            case CalculatorEvent.Overflow:
+                SetMood(Mood.Shocked, "That number is way too big for my tiny brain! @_@");
+                break;
+            case CalculatorEvent.Cleared:
+                SetMood(Mood.Idle, "All clean! Fresh start~ ✧");
+                break;
+        }
+
+        if (e is CalculatorEvent.Evaluated or CalculatorEvent.DivideByZero or CalculatorEvent.Overflow)
+        {
+            var unlocked = _profile.Record(e, _engine.LastResult);
+            foreach (var skin in unlocked) ShowToast(skin);
+            _ = Store.SaveAsync(_profile);
+        }
+    }
+
+    private void ReactToResult(decimal result)
+    {
+        var text = CalculatorEngine.Format(result);
+        switch (result)
+        {
+            case 42:
+                SetMood(Mood.Love, "42! The answer to life, the universe and everything!! ☆");
+                break;
+            case 69:
+                SetMood(Mood.Smug, "Nice. ( ͡° ͜ʖ ͡°)");
+                break;
+            case 1337:
+                SetMood(Mood.Smug, "So 1337, senpai. h4x0r desu.");
+                break;
+            case 7 or 77 or 777:
+                SetMood(Mood.Love, $"{text}! Lucky number! Maybe buy a skin? Hehe~");
+                break;
+            case 0:
+                SetMood(Mood.Smug, "Zero... just like the money I've made from this shop.");
+                break;
+            case < 0:
+                SetMood(Mood.Happy, $"Ehh, negative? {text}... cheer up!");
+                break;
+            default:
+                SetMood(Mood.Happy, string.Format(Pick(HappyLines), text));
+                break;
+        }
+    }
+
+    private void SetMood(Mood mood, string speech, int resetAfterMs = 3500)
+    {
+        _mood = mood;
+        _speech = speech;
+
+        _moodReset?.Cancel();
+        _moodReset = new CancellationTokenSource();
+        var token = _moodReset.Token;
+        _ = Task.Delay(resetAfterMs, token).ContinueWith(async t =>
+        {
+            if (t.IsCanceled) return;
+            await InvokeAsync(() =>
+            {
+                _mood = Mood.Idle;
+                StateHasChanged();
+            });
+        }, TaskScheduler.Default);
+    }
+
+    private void ShowToast(Skin skin)
+    {
+        _toasts.Add(skin);
+        _ = Task.Delay(6000).ContinueWith(_ => InvokeAsync(() =>
+        {
+            _toasts.Remove(skin);
+            StateHasChanged();
+        }));
+    }
+
+    private async Task Equip(Skin skin)
+    {
+        if (!_profile.Select(skin.Id)) return;
+        _toasts.Remove(skin);
+        SetMood(Mood.Love, $"Do you like my new look? I'm {skin.CharacterName} now! ♡");
+        await Store.SaveAsync(_profile);
+    }
+
+    private async Task OnPurchased((IReadOnlyList<Skin> Skins, decimal Total) purchase)
+    {
+        _profile.Grant(purchase.Skins);
+        _profile.PretendMoneySpent += purchase.Total;
+        SetMood(Mood.Love, "Thank you for your totally fake support!! ♡♡♡");
+        await Store.SaveAsync(_profile);
+    }
+
+    private void OpenShop()
+    {
+        _shopOpen = true;
+        SetMood(Mood.Smug, "Psst... wanna see some premium outfits? (｡•̀ᴗ-)✧", 6000);
+    }
+
+    private async Task CloseShop()
+    {
+        _shopOpen = false;
+        await _root.FocusAsync();
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (_shopOpen) return;
+
+        CalculatorEvent? result = e.Key switch
+        {
+            { Length: 1 } k when char.IsAsciiDigit(k[0]) => _engine.InputDigit(k[0] - '0'),
+            "." or "," => _engine.InputDecimalPoint(),
+            "+" => _engine.SetOperator(Operator.Add),
+            "-" => _engine.SetOperator(Operator.Subtract),
+            "*" or "x" => _engine.SetOperator(Operator.Multiply),
+            "/" => _engine.SetOperator(Operator.Divide),
+            "Enter" or "=" => _engine.Evaluate(),
+            "Backspace" => _engine.Backspace(),
+            "Escape" or "Delete" => _engine.Clear(),
+            "%" => _engine.Percent(),
+            _ => null
+        };
+
+        if (result is { } ev)
+        {
+            Do(ev);
+        }
+    }
+
+    private string Pick(string[] lines) => lines[_random.Next(lines.Length)];
+
+    private static readonly string[] ThinkingLines =
+    [
+        "Mhm, mhm... I'm listening~",
+        "Ooh, what are we calculating?",
+        "Hmm... (｀・ω・´)",
+        "Keep going, you're doing great!",
+    ];
+
+    private static readonly string[] HappyLines =
+    [
+        "Sugoi! It's {0}! ✧",
+        "Easy peasy! {0}~",
+        "Ta-da! The answer is {0}!",
+        "{0}! Am I smart or what? (ᵔᴥᵔ)",
+        "Yatta! {0}!",
+    ];
+
+    public void Dispose() => _moodReset?.Cancel();
+}

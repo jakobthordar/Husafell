@@ -1,0 +1,133 @@
+@using System.Globalization
+@using AnimeCalculator.Core.Shop
+@using AnimeCalculator.Core.Skins
+
+@*
+    A pretend checkout. There is no payment integration of any kind: no card fields,
+    no network calls, nothing is ever charged. Confirming shows a "just kidding" screen
+    and hands the skins over for free.
+*@
+<div class="overlay checkout-overlay" @onclick:stopPropagation="true">
+    <div class="checkout" role="dialog" aria-modal="true" aria-label="Checkout">
+        @switch (_step)
+        {
+            case Step.Review:
+                <header class="checkout-header">
+                    <h3>🔒 Secure Checkout</h3>
+                    <button class="close" @onclick="OnCancel" aria-label="Cancel checkout">✕</button>
+                </header>
+
+                <ul class="receipt">
+                    @foreach (var line in _quote.Items)
+                    {
+                        <li><span>@line.Label</span><span>@Money(line.Amount)</span></li>
+                    }
+                    <li class="subtotal"><span>Subtotal</span><span>@Money(_quote.Subtotal)</span></li>
+                    @foreach (var fee in _quote.Fees)
+                    {
+                        <li class="fee"><span>@fee.Label</span><span>@Money(fee.Amount)</span></li>
+                    }
+                    <li class="total"><span>Total</span><span>@Money(_quote.Total)</span></li>
+                </ul>
+
+                @if (_quote.YouSave > 0)
+                {
+                    <div class="you-save">🎉 You save @Money(_quote.YouSave) today!</div>
+                }
+
+                <fieldset class="pay-methods">
+                    <legend>Payment method</legend>
+                    @foreach (var (id, label) in PaymentMethods)
+                    {
+                        <label class="pay-method @(_method == id ? "selected" : "")">
+                            <input type="radio" name="pay" checked="@(_method == id)" @onchange="() => _method = id" />
+                            @label
+                        </label>
+                    }
+                </fieldset>
+
+                <button class="buy pay" @onclick="Pay">Pay @Money(_quote.Total) now</button>
+                <p class="fine-print">All sales are final. Refunds are issued in headpats only.</p>
+                break;
+
+            case Step.Processing:
+                <div class="processing">
+                    <div class="spinner"></div>
+                    <p>@ProcessingLines[Math.Min(_processingIndex, ProcessingLines.Length - 1)]</p>
+                </div>
+                break;
+
+            case Step.JustKidding:
+                <div class="just-kidding">
+                    <Mascot Skin="Skins[0]" Mood="Mood.Love" Small="true" />
+                    <h3>Just kidding! 🎉</h3>
+                    <p>
+                        <strong>This is a joke app. No real money was charged.</strong>
+                        The shop isn't connected to any bank or payment provider, no payment
+                        details were collected, and none ever will be.
+                    </p>
+                    <p>Your new skin@(Skins.Count == 1 ? " is" : "s are") unlocked for free. Enjoy!</p>
+                    <div class="pretend-total">
+                        Pretend money spent so far: <strong>@Money(_spentBefore + _quote.Total)</strong>
+                    </div>
+                    <button class="buy pay" @onclick="() => OnEquip.InvokeAsync(Skins[0])">Yay! Equip @Skins[0].CharacterName</button>
+                </div>
+                break;
+        }
+    </div>
+</div>
+
+@code {
+    private enum Step { Review, Processing, JustKidding }
+
+    private static readonly CultureInfo Usd = CultureInfo.GetCultureInfo("en-US");
+
+    private static readonly (string Id, string Label)[] PaymentMethods =
+    [
+        ("card", "💳 Card on file"),
+        ("piggy", "🐷 Piggy bank"),
+        ("mochi", "🍡 300 mochi"),
+    ];
+
+    private static readonly string[] ProcessingLines =
+    [
+        "Contacting your bank...",
+        "Convincing your bank...",
+        "Bribing your bank with mochi...",
+        "Almost there...",
+    ];
+
+    [Parameter, EditorRequired] public IReadOnlyList<Skin> Skins { get; set; } = [];
+    [Parameter] public decimal PretendMoneySpentSoFar { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<(IReadOnlyList<Skin> Skins, decimal Total)> OnPurchased { get; set; }
+    [Parameter] public EventCallback<Skin> OnEquip { get; set; }
+
+    private CheckoutQuote _quote = CheckoutQuote.For([]);
+    private Step _step = Step.Review;
+    private string _method = "card";
+    private int _processingIndex;
+
+    private decimal _spentBefore;
+
+    protected override void OnInitialized()
+    {
+        _quote = CheckoutQuote.For(Skins);
+        _spentBefore = PretendMoneySpentSoFar;
+    }
+
+    private async Task Pay()
+    {
+        _step = Step.Processing;
+        for (_processingIndex = 0; _processingIndex < ProcessingLines.Length; _processingIndex++)
+        {
+            StateHasChanged();
+            await Task.Delay(700);
+        }
+
+        _step = Step.JustKidding;
+        await OnPurchased.InvokeAsync((Skins, _quote.Total));
+    }
+
+    private static string Money(decimal amount) => amount.ToString("C", Usd);
+}
